@@ -20,7 +20,7 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 from plot_candles import *
 
 
-def stock_warning(stockno,selec_month = False,year = 2019, month =1):
+def stock_warning(stockno,selec_month = False,year = 2019, month =3):
     token = "Z5Cg6UUou2ipMn2orBmEm4rZ6b7nbBBhbctzff9Ch2u"
     
     stock_data = twstock.Stock(str(stockno))
@@ -56,11 +56,11 @@ def stock_warning(stockno,selec_month = False,year = 2019, month =1):
         if real_price['success']:
             price_now = pd.Series([float(real_price['realtime']['latest_trade_price'])]*n)
             price_now.index = data.date
-            real_stock = pd.DataFrame({'open':[real_price['realtime']['open']],
-                                  'close':[real_price['realtime']['latest_trade_price']],
-                                  'high':[real_price['realtime']['high']],
-                                  'low':[real_price['realtime']['low']],
-                                  'volume':[real_price['realtime']['accumulate_trade_volume']]},
+            real_stock = pd.DataFrame({'open':[float(real_price['realtime']['open'])],
+                                  'close':[float(real_price['realtime']['latest_trade_price'])],
+                                  'high':[float(real_price['realtime']['high'])],
+                                  'low':[float(real_price['realtime']['low'])],
+                                  'volume':[float(real_price['realtime']['accumulate_trade_volume'])]},
                 index = [real_time])
             
             
@@ -99,19 +99,19 @@ def stock_warning(stockno,selec_month = False,year = 2019, month =1):
     
     KD1 = (max(k,d)<20) & (k>d)
     if KD1:
-        msg +='KD低於20且K大於D' +'\n'
+        msg +='!!! KD < 20 且 K > D' +'\n'
         
     KD2 = (min(k,d)>20) & (k<d)
     if KD2:
-        msg +='KD低於20且K大於D' +'\n'
+        msg +='!!! KD < 20 且 K > D' +'\n'
     
     RSI1 = rsi<20
     if RSI1:
-        msg += 'RSI低於20' +'\n'
+        msg += '!!! RSI < 20' +'\n'
     
     RSI2 = rsi>80
     if RSI2:
-        msg += 'RSI高於80' +'\n'
+        msg += '!!! RSI > 80' +'\n'
     
     
     
@@ -121,10 +121,13 @@ def stock_warning(stockno,selec_month = False,year = 2019, month =1):
     #msg += '\n'
     #msg += str(real_price['realtime'])
     
+    start_time = str(data.date[0])
+    end_time = str(data.date[len(data.date)-1])
+    
     if KD1 or KD2 or RSI1 or RSI2:
         pic = plot_candles(
-                         start_time='2019-01-01',      ## 開始時間
-                         end_time='2019-03-13',       ## 結束時間
+                         start_time=start_time,      ## 開始時間
+                         end_time=end_time,       ## 結束時間
                          pricing=stock,                            ## dataframe 只吃 ['open_price', 'close_price', 'high', 'low', 'volume']
                          title=real_price['info']['code'],                      ## 名稱而已
                          volume_bars=True,               ## 畫不畫 量圖
@@ -140,8 +143,8 @@ def stock_warning(stockno,selec_month = False,year = 2019, month =1):
 
 
 
-stock_list = ['2484','3036','00632R']
-stockno = stock_list[1]
+stock_list = ['2484','3036','0050']
+stockno = stock_list[2]
 
 stock_warning(stockno)
 

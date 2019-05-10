@@ -137,24 +137,25 @@ class stock_monitor(object):
             rsi = RSI[-1] 
             
 
-            msg = self.real_price['info']['name']+'的股價: '
+            msg = self.real_price['info']['code']
+            msg += self.real_price['info']['name']+'的股價: '
             msg += self.real_price['realtime']['latest_trade_price'] +'\n'
             
             KD1 = (d<20) & (k>d)
             if KD1:
-                msg +='!!! KD < 20 且 K > D' +'\n'
+                msg +='up!!!   KD < 20 且 K > D' +'\n'
                 
             KD2 = (d>80) & (k<d)
             if KD2:
-                msg +='!!! KD > 80 且 K < D' +'\n'
+                msg +='down!!! KD > 80 且 K < D' +'\n'
             
             RSI1 = rsi<20
             if RSI1:
-                msg += '!!! RSI < 20' +'\n'
+                msg += 'up!!!   RSI < 20' +'\n'
             
             RSI2 = rsi>80
             if RSI2:
-                msg += '!!! RSI > 80' +'\n'
+                msg += 'down!!! RSI > 80' +'\n'
             
             
             

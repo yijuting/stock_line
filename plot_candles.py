@@ -116,12 +116,16 @@ def plot_candles(start_time, end_time, pricing, title=None,
             ax.set_title(technicals_titles[i])
     return fig
 
-def lineNotify(token, msg, image_path):
+def lineNotify(token, msg, image_path = False):
     url = "https://notify-api.line.me/api/notify"
     headers = {
         "Authorization": "Bearer " + token
     }
     payload = {'message': msg}
-    files = {'imageFile': open(image_path, 'rb')}
-    r = requests.post(url, headers = headers, params = payload, files = files)
+    if image_path != False:
+        files = {'imageFile': open(image_path, 'rb')}
+        r = requests.post(url, headers = headers, params = payload, files = files)
+    else:
+        r = requests.post(url, headers = headers, params = payload)
     return r.status_code
+

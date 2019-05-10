@@ -40,6 +40,8 @@ def ma_bias_ratio(price, day1, day2):
 class stock_monitor(object):
     def __init__(self):    
         self. save_stock_data = {}
+        self.msg = ""
+        self.token = "Z5Cg6UUou2ipMn2orBmEm4rZ6b7nbBBhbctzff9Ch2u"
 
     def get_real_stock(self,stockno):
         real_price = twstock.realtime.get(str(stockno))
@@ -82,12 +84,13 @@ class stock_monitor(object):
         return(stock)
     
     
-    def stock_warning(self,
+    def stock_warning(self, scheduler = None,
                       select_month = False,
                       year = 2019, 
                       month =3):
-        token = "Z5Cg6UUou2ipMn2orBmEm4rZ6b7nbBBhbctzff9Ch2u"
+        
         stockno = self.stockno
+        self.scheduler = scheduler
         
         try:
             if str(stockno) in self.save_stock_data:
@@ -133,17 +136,17 @@ class stock_monitor(object):
             d = STOCH.slowd[-1]
             rsi = RSI[-1] 
             
-            msg = '\n' + self.real_price['info']['time']+'\n'
-            msg += self.real_price['info']['name']+'的股價: '
+
+            msg = self.real_price['info']['name']+'的股價: '
             msg += self.real_price['realtime']['latest_trade_price'] +'\n'
             
-            KD1 = (max(k,d)<20) & (k>d)
+            KD1 = (d<20) & (k>d)
             if KD1:
                 msg +='!!! KD < 20 且 K > D' +'\n'
                 
-            KD2 = (min(k,d)>20) & (k<d)
+            KD2 = (d>80) & (k<d)
             if KD2:
-                msg +='!!! KD > 20 且 K < D' +'\n'
+                msg +='!!! KD > 80 且 K < D' +'\n'
             
             RSI1 = rsi<20
             if RSI1:
@@ -180,21 +183,30 @@ class stock_monitor(object):
                     technicals_titles=['RSI', 'KD','BIAS'] ## 其他圖的名稱
                     )        
             if KD1 or KD2 or RSI1 or RSI2 or self.sent_plot:
+                msg = self.real_price['info']['time']+'\n' + msg
                 image_path = 'plot_stock.jpg'
                 plt.savefig(image_path)
-                lineNotify(token, msg, image_path)
+                lineNotify(self.token, msg, image_path)
                 
+            else:
+                self.msg += '\n'+msg
             
             print(msg)
             
         except:
             msg = 'something went wrong'
-            lineNotify(token, msg, 'error.jpg')
+            
             if self.scheduler:
+                lineNotify(self.token, msg, 'error.jpg')
                 self.scheduler.shutdown(wait=False)
             else:
                 print(msg)
 
+    def sent_routing(self):
+        msg = self.real_price['info']['time']+'\n' + self.msg
+        lineNotify(self.token, msg)
+        
+    
     def manual_monitor(self, stockno,sent_plot = False):
         self.stockno = stockno
         self.scheduler = None
@@ -219,13 +231,17 @@ class stock_monitor(object):
         
 
 
-stock_list = ['2484','3036','0050','00677U']
-sent_plot = False
+#stock_list = ['2484','3036','0050','00677U']
+
 monitor = stock_monitor()
 #monitor.manual_monitor(stock_list[], sent_plot)
 
+stock_list = ['2484','3036','3289','1441','00677U']
+sent_plot = False
+
 for stockno in stock_list:
     monitor.manual_monitor(stockno, sent_plot)
+monitor.sent_routing()
     
 #monitor.schedule_monitor(stock_list[0], 20)
 

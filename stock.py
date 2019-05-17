@@ -14,6 +14,7 @@ import time
 from matplotlib import pyplot as plt
 
 from talib import abstract
+import talib
 import twstock
 
 from apscheduler.schedulers.blocking import BlockingScheduler
@@ -84,10 +85,7 @@ class stock_monitor(object):
         return(stock)
     
     
-    def stock_warning(self, scheduler = None,
-                      select_month = False,
-                      year = 2019, 
-                      month =3):
+    def stock_warning(self, scheduler = None):
         
         stockno = self.stockno
         self.scheduler = scheduler
@@ -100,10 +98,11 @@ class stock_monitor(object):
                 
             else:
                 stock_data = twstock.Stock(str(stockno))
-                if select_month:
-                    data = stock_data.fetch_from(year, month)
-                else:
-                    data = stock_data.fetch_31()
+                year = datetime.now().year
+                month = datetime.now().month-2
+                month = month if month>=1 else month+12
+                data = stock_data.fetch_from(year, month)
+
                 data = pd.DataFrame(data)
                 
                 stock = data[['open','close','high','low','capacity']]
@@ -117,9 +116,27 @@ class stock_monitor(object):
             
             self.save_stock_data.update({str(stockno):stock})
             
-            SMA = abstract.SMA(stock)
-            RSI = abstract.RSI(stock)
-            STOCH = abstract.STOCH(stock) 
+            SMA = talib.MA(np.array(stock.close), 30, matype=0)
+            SMA = pd.Series(SMA)
+            SMA.index = stock.index
+            RSI = talib.RSI(np.array(stock.close),timeperiod = 5)            
+            RSI = pd.Series(RSI)
+            RSI.index = stock.index
+
+            
+            K,D = talib.STOCH(high = np.array(stock.high), 
+                              low = np.array(stock.low), 
+                              close = np.array(stock.close),
+                              fastk_period=9,
+                              slowk_period=3,
+                              slowk_matype=0,
+                              slowd_period=3,
+                              slowd_matype=0)
+            STOCH = pd.DataFrame(K, index = stock.index, columns = ['K'])
+            STOCH['D'] = pd.Series(D, index = stock.index, name = 'D')
+            J_df = pd.merge(STOCH.K, STOCH.D, left_index=True, right_index=True).apply(
+                    lambda x: (3*x.K) - (2*x.D), axis = 1)
+            
             BIAS = [np.nan]*9+ma_bias_ratio(stock.close, 5, 10)
             BIAS = pd.Series(BIAS)
             BIAS.index = stock.index
@@ -130,16 +147,17 @@ class stock_monitor(object):
             #RSI.plot()
             #stock['close'].plot(secondary_y=True)
             
+            price_now = self.real_price['realtime']['latest_trade_price']
             
-            
-            k = STOCH.slowk[-1]
-            d = STOCH.slowd[-1]
+            k = STOCH.K[-1]
+            d = STOCH.D[-1]
             rsi = RSI[-1] 
+            bias = BIAS[-1]
             
 
             msg = self.real_price['info']['code']
             msg += self.real_price['info']['name']+'的股價: '
-            msg += self.real_price['realtime']['latest_trade_price'] +'\n'
+            msg += price_now +'\n'
             
             KD1 = (d<20) & (k>d)
             if KD1:
@@ -157,21 +175,28 @@ class stock_monitor(object):
             if RSI2:
                 msg += 'down!!! RSI > 80' +'\n'
             
-            
+            BIAS1 = bias<-17
+            if BIAS1:
+                msg += 'up!!! BIAS < -17' +'\n'
+
+            BIAS1 = bias > 17
+            if BIAS1:
+                msg += 'down!!! BIAS > 17' +'\n'            
             
             msg += 'K = ' + str(round(k,0)) +'\n'
             msg += 'D = ' + str(round(d,0)) +'\n'
-            msg += 'RSI = ' + str(round(rsi,0)) 
+            msg += 'RSI = ' + str(round(rsi,0))+'\n' 
+            msg += '乖離率 = ' + str(round(bias,0))+'\n' 
             #msg += '\n'
             #msg += str(real_price['realtime'])
             
-            start_time = str(stock.index[0])
+            start_time = str(stock.index[-20])
             end_time = str(stock.index[-1])
             #.strftime('%d-%m-%Y')
             
             n = len(stock)
             price_now = pd.Series(self.price_now*n)
-            price_now.index = stock.index
+            price_now.index =  stock.index
             pic = plot_candles(
                     start_time=start_time,## 開始時間
                     end_time=end_time,## 結束時間
@@ -242,7 +267,7 @@ sent_plot = False
 
 for stockno in stock_list:
     monitor.manual_monitor(stockno, sent_plot)
-monitor.sent_routing()
+#monitor.sent_routing()
     
 #monitor.schedule_monitor(stock_list[0], 20)
 

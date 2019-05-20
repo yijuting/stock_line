@@ -267,7 +267,7 @@ sent_plot = False
 
 for stockno in stock_list:
     monitor.manual_monitor(stockno, sent_plot)
-#monitor.sent_routing()
+monitor.sent_routing()
     
 #monitor.schedule_monitor(stock_list[0], 20)
 

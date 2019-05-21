@@ -190,14 +190,14 @@ class stock_monitor(object):
             if RSI1:
                 temp_min = min(stock.close[highpeak:len(stock)])
                 if (float(price_now)<=temp_min)&(rsi>=min_rsi)&(~up_now):
-                    "high up!!! 股價新低 但 RSI不是新低"
+                    msg += "high up!!! 股價新低 但 RSI不是新低"
                 msg += 'up!!!   RSI < 20' +'\n'
             
             RSI2 = rsi>80
             if RSI2:
                 temp_max = max(stock.close[lowpeak:len(stock)])
                 if (float(price_now)>=temp_max)&(rsi<=max_rsi)&up_now:
-                    "risk down!!! 股價新高 但 RSI不是新高"
+                    msg += "risk down!!! 股價新高 但 RSI不是新高"
                 msg += 'down!!! RSI > 80' +'\n'
             
             BIAS1 = bias<-17

@@ -21,6 +21,8 @@ import twstock
 from apscheduler.schedulers.blocking import BlockingScheduler
 from plot_candles import *
 
+stock_list = ['2484','3036','3289','1441']
+#,'00677U'
 
 
 def moving_average(data, days):
@@ -43,7 +45,11 @@ class stock_monitor(object):
     def __init__(self):    
         self. save_stock_data = {}
         self.msg = ""
-        self.token = "Z5Cg6UUou2ipMn2orBmEm4rZ6b7nbBBhbctzff9Ch2u"
+        ###群組的
+#        self.token = "Z5Cg6UUou2ipMn2orBmEm4rZ6b7nbBBhbctzff9Ch2u"
+        
+        ##1:1test
+        self.token = "tvDdPhFVpc2Dafuk6SOuez7arByOG4mxBauVTAQXuZO"
 
     def get_real_stock(self,stockno):
         real_price = twstock.realtime.get(str(stockno))
@@ -89,7 +95,6 @@ class stock_monitor(object):
     def stock_warning(self, scheduler = None):
         
         stockno = self.stockno
-        self.scheduler = scheduler
         
         try:
             if str(stockno) in self.save_stock_data:
@@ -137,9 +142,9 @@ class stock_monitor(object):
                               slowd_matype=0)
             STOCH = pd.DataFrame(K, index = stock.index, columns = ['K'])
             STOCH['D'] = pd.Series(D, index = stock.index, name = 'D')
-            J_df = pd.merge(STOCH.K.to_frame(), STOCH.D.to_frame(), 
-                            left_index=True, right_index=True).apply(
-                                    lambda x: (3*x.K) - (2*x.D), axis = 1)
+#            J_df = pd.merge(STOCH.K.to_frame(), STOCH.D.to_frame(), 
+#                            left_index=True, right_index=True).apply(
+#                                    lambda x: (3*x.K) - (2*x.D), axis = 1)
             
             BIAS = [np.nan]*9+ma_bias_ratio(stock.close, 5, 10)
             BIAS = pd.Series(BIAS)
@@ -155,17 +160,19 @@ class stock_monitor(object):
             
             price = pd.Series(stock.close)
             highpeak = peakutils.indexes(price, thres=0.5, min_dist=30)[-1]
-            max_price = stock.close[highpeak]
             lowpeak = peakutils.indexes(-price, thres=0.5, min_dist=30)[-1]
-            min_price = stock.close[lowpeak]
             up_now = highpeak<lowpeak
 
             msg = self.real_price['info']['code']
             msg += self.real_price['info']['name']+'的股價: '
             msg += price_now +'\n'
 
+            min_rsi = min(RSI[highpeak:len(RSI)])
+            max_rsi = max(RSI[lowpeak:len(RSI)])
+
             if up_now:
                 msg += '近日趨勢上漲中 \n'
+
             else:
                 msg += '近日趨勢下降中 \n'
             
@@ -184,20 +191,22 @@ class stock_monitor(object):
             if KD2:
                 msg +='down!!! KD > 80 且 K < D' +'\n'
                 
-            min_rsi = min(RSI[-10:len(RSI)])
-            max_rsi = max(RSI[-10:len(RSI)])
+
             RSI1 = rsi<20
             if RSI1:
                 temp_min = min(stock.close[highpeak:len(stock)])
                 if (float(price_now)<=temp_min)&(rsi>=min_rsi)&(~up_now):
                     msg += "high up!!! 股價新低 但 RSI不是新低"
+                    msg += '歷史 min RSI = '+str(round(min_rsi,0))+'\n'
                 msg += 'up!!!   RSI < 20' +'\n'
             
             RSI2 = rsi>80
             if RSI2:
                 temp_max = max(stock.close[lowpeak:len(stock)])
+
                 if (float(price_now)>=temp_max)&(rsi<=max_rsi)&up_now:
                     msg += "risk down!!! 股價新高 但 RSI不是新高"
+                    msg += '歷史 Max RSI = '+str(round(max_rsi,0))+'\n'
                 msg += 'down!!! RSI > 80' +'\n'
             
             BIAS1 = bias<-17
@@ -211,6 +220,7 @@ class stock_monitor(object):
             msg += 'K = ' + str(round(k,0)) +'\n'
             msg += 'D = ' + str(round(d,0)) +'\n'
             msg += 'RSI = ' + str(round(rsi,0))+'\n' 
+             
             msg += '乖離率 = ' + str(round(bias,0))+'\n' 
             #msg += '\n'
             #msg += str(real_price['realtime'])
@@ -246,12 +256,7 @@ class stock_monitor(object):
             
         except:
             msg = 'something went wrong'
-            
-            if self.scheduler:
-                lineNotify(self.token, msg, 'error.jpg')
-                self.scheduler.shutdown(wait=False)
-            else:
-                print(msg)
+            print(msg)
 
     def sent_routing(self):
         msg = self.real_price['info']['time']+'\n' + self.msg
@@ -259,26 +264,15 @@ class stock_monitor(object):
         
     
     def manual_monitor(self, stockno,sent_plot = False):
+        if not self.save_stock_data:
+            msg = '======new notification====='
+            lineNotify(self.token, msg)
         self.stockno = stockno
-        self.scheduler = None
+
         self.sent_plot = sent_plot
         self.stock_warning()
         
-    def schedule_monitor(self, stockno, minute_interval = 10,sent_plot = False):
-        start_date = time.strftime('%Y-%m-%d 09:00:00', time.localtime(time.time()))
-        end_date = time.strftime('%Y-%m-%d 13:00:00', time.localtime(time.time()))
-        self.stockno = stockno
-        self.sent_plot = sent_plot
-        
-        self.scheduler = BlockingScheduler()
-        self.scheduler.add_job(self.stock_warning,
-                              trigger = 'interval',
-                              minutes = minute_interval,
-                              args=(),
-                              start_date = start_date,
-                              end_date = end_date)
-        
-        self.scheduler.start()
+
         
 
 
@@ -287,8 +281,9 @@ class stock_monitor(object):
 
 #monitor.manual_monitor(stock_list[], sent_plot)
 def start_monitor():
+
     monitor = stock_monitor()
-    stock_list = ['2484','3036','3289','1441','00677U']
+    
     sent_plot = False
     
     for stockno in stock_list:
@@ -297,15 +292,17 @@ def start_monitor():
     
 def start_monitor_no_alert():
     monitor = stock_monitor()
-    stock_list = ['2484','3036','3289','1441','00677U']
+
     sent_plot = False
     
     for stockno in stock_list:
         monitor.manual_monitor(stockno, sent_plot)
-
-
+        
+        
 start_monitor()
 
+#
+#
 #scheduler = BlockingScheduler()
 #
 #scheduler.add_job(start_monitor,
@@ -321,24 +318,24 @@ start_monitor()
 #scheduler.add_job(start_monitor_no_alert,
 #                  trigger = 'cron',
 #                  day_of_week='mon-fri', 
-#                  hour=9, minute=30, end_date='2020-05-20')
+#                  hour=10, minute=0, end_date='2020-05-20')
 #
 #scheduler.add_job(start_monitor_no_alert,
 #                  trigger = 'cron',
 #                  day_of_week='mon-fri', 
-#                  hour=10, minute=30, end_date='2020-05-20')
+#                  hour=11, minute=0, end_date='2020-05-20')
 #
 #scheduler.add_job(start_monitor,
 #                  trigger = 'cron',
 #                  day_of_week='mon-fri', 
-#                  hour=11, minute=30, end_date='2020-05-20')
+#                  hour=12, minute=0, end_date='2020-05-20')
 #
 #scheduler.add_job(start_monitor_no_alert,
 #                  trigger = 'cron',
 #                  day_of_week='mon-fri', 
 #                  hour=12, minute=30, end_date='2020-05-20')
 #
-#scheduler.add_job(start_monitor,
+#scheduler.add_job(start_monitor_no_alert,
 #                  trigger = 'cron',
 #                  day_of_week='mon-fri', 
 #                  hour=13, minute=20, end_date='2020-05-20')

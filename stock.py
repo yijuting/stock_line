@@ -21,7 +21,8 @@ import twstock
 from apscheduler.schedulers.blocking import BlockingScheduler
 from plot_candles import *
 
-
+stock_list = ['2484','3036','3289','1441']
+#,'00677U'
 
 def moving_average(data, days):
     result = []
@@ -43,7 +44,11 @@ class stock_monitor(object):
     def __init__(self):    
         self. save_stock_data = {}
         self.msg = ""
+        ###群組的
         self.token = "Z5Cg6UUou2ipMn2orBmEm4rZ6b7nbBBhbctzff9Ch2u"
+        
+        ##1:1test
+#        self.token = "tvDdPhFVpc2Dafuk6SOuez7arByOG4mxBauVTAQXuZO"
 
     def get_real_stock(self,stockno):
         real_price = twstock.realtime.get(str(stockno))
@@ -89,7 +94,6 @@ class stock_monitor(object):
     def stock_warning(self, scheduler = None):
         
         stockno = self.stockno
-        self.scheduler = scheduler
         
         try:
             if str(stockno) in self.save_stock_data:
@@ -189,7 +193,7 @@ class stock_monitor(object):
 
             RSI1 = rsi<20
             if RSI1:
-                temp_min = min(stock.close[highpeak:len(stock)])
+                temp_min = min(stock.low[highpeak:len(stock)])
                 if (float(price_now)<=temp_min)&(rsi>=min_rsi)&(~up_now):
                     msg += "high up!!! 股價新低 但 RSI不是新低"
                     msg += '歷史 min RSI = '+str(round(min_rsi,0))+'\n'
@@ -197,7 +201,7 @@ class stock_monitor(object):
             
             RSI2 = rsi>80
             if RSI2:
-                temp_max = max(stock.close[lowpeak:len(stock)])
+                temp_max = max(stock.high[lowpeak:len(stock)])
 
                 if (float(price_now)>=temp_max)&(rsi<=max_rsi)&up_now:
                     msg += "risk down!!! 股價新高 但 RSI不是新高"
@@ -251,12 +255,7 @@ class stock_monitor(object):
             
         except:
             msg = 'something went wrong'
-            
-            if self.scheduler:
-                lineNotify(self.token, msg, 'error.jpg')
-                self.scheduler.shutdown(wait=False)
-            else:
-                print(msg)
+            print(msg)
 
     def sent_routing(self):
         msg = self.real_price['info']['time']+'\n' + self.msg
@@ -268,25 +267,11 @@ class stock_monitor(object):
             msg = '======new notification====='
             lineNotify(self.token, msg)
         self.stockno = stockno
-        self.scheduler = None
+
         self.sent_plot = sent_plot
         self.stock_warning()
         
-    def schedule_monitor(self, stockno, minute_interval = 10,sent_plot = False):
-        start_date = time.strftime('%Y-%m-%d 09:00:00', time.localtime(time.time()))
-        end_date = time.strftime('%Y-%m-%d 13:00:00', time.localtime(time.time()))
-        self.stockno = stockno
-        self.sent_plot = sent_plot
-        
-        self.scheduler = BlockingScheduler()
-        self.scheduler.add_job(self.stock_warning,
-                              trigger = 'interval',
-                              minutes = minute_interval,
-                              args=(),
-                              start_date = start_date,
-                              end_date = end_date)
-        
-        self.scheduler.start()
+
         
 
 
@@ -297,7 +282,7 @@ class stock_monitor(object):
 def start_monitor():
 
     monitor = stock_monitor()
-    stock_list = ['2484','3036','3289','1441','00677U']
+    
     sent_plot = False
     
     for stockno in stock_list:
@@ -306,7 +291,7 @@ def start_monitor():
     
 def start_monitor_no_alert():
     monitor = stock_monitor()
-    stock_list = ['2484','3036','3289','1441','00677U']
+
     sent_plot = False
     
     for stockno in stock_list:

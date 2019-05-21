@@ -117,11 +117,7 @@ class stock_monitor(object):
             
             self.save_stock_data.update({str(stockno):stock})
             
-            price = pd.Series(stock.close)
-            highpeak = peakutils.indexes(price, thres=0.5, min_dist=30)[-1]
-            min_price = min(stock.close[highpeak:len(stock)])
-            lowpeak = peakutils.indexes(-price, thres=0.5, min_dist=30)[-1]
-            max_price = max(stock.close[lowpeak:len(stock)])
+
             
             SMA = talib.MA(np.array(stock.close), 30, matype=0)
             SMA = pd.Series(SMA)
@@ -157,13 +153,21 @@ class stock_monitor(object):
             rsi = RSI[-1] 
             bias = BIAS[-1]
             
+            price = pd.Series(stock.close)
+            highpeak = peakutils.indexes(price, thres=0.5, min_dist=30)[-1]
+            min_price = min(stock.close[highpeak:len(stock)])
+            lowpeak = peakutils.indexes(-price, thres=0.5, min_dist=30)[-1]
+            max_price = max(stock.close[lowpeak:len(stock)])
+            up_or_not = highpeak<lowpeak
 
             msg = self.real_price['info']['code']
             msg += self.real_price['info']['name']+'的股價: '
             msg += price_now +'\n'
             
-            msg += '近日低點收盤價: %s \n' % stock.close[lowpeak]
-            msg += '近日高點收盤價: %s \n' % stock.close[highpeak]
+            if up_or_not:
+                msg += '近日低點收盤價: %s \n' % stock.close[lowpeak]
+            else:
+                msg += '近日高點收盤價: %s \n' % stock.close[highpeak]
             
             KD1 = (d<20) & (k>d)
             if KD1:
@@ -177,13 +181,13 @@ class stock_monitor(object):
             max_rsi = max(RSI[-10:len(RSI)])
             RSI1 = rsi<20
             if RSI1:
-                if (float(price_now)<=min_price)&(rsi>=min_rsi):
+                if (float(price_now)<=min_price)&(rsi>=min_rsi)&(~up_or_not):
                     "high up!!! 股價新低 但 RSI不是新低"
                 msg += 'up!!!   RSI < 20' +'\n'
             
             RSI2 = rsi>80
             if RSI2:
-                if (float(price_now)>=min_price)&(rsi<=max_rsi):
+                if (float(price_now)>=max_price)&(rsi<=max_rsi)&up_or_not:
                     "risk down!!! 股價新高 但 RSI不是新高"
                 msg += 'down!!! RSI > 80' +'\n'
             
@@ -291,55 +295,55 @@ def start_monitor_no_alert():
         monitor.manual_monitor(stockno, sent_plot)
 
 
-
-
-scheduler = BlockingScheduler()
-
-scheduler.add_job(start_monitor,
-                  trigger = 'cron',
-                  day_of_week='mon-fri', 
-                  hour=8, minute=30, end_date='2020-05-20')
-
-scheduler.add_job(start_monitor,
-                  trigger = 'cron',
-                  day_of_week='mon-fri', 
-                  hour=9, minute=2, end_date='2020-05-20')
-
-scheduler.add_job(start_monitor_no_alert,
-                  trigger = 'cron',
-                  day_of_week='mon-fri', 
-                  hour=9, minute=30, end_date='2020-05-20')
-
-scheduler.add_job(start_monitor_no_alert,
-                  trigger = 'cron',
-                  day_of_week='mon-fri', 
-                  hour=10, minute=30, end_date='2020-05-20')
-
-scheduler.add_job(start_monitor,
-                  trigger = 'cron',
-                  day_of_week='mon-fri', 
-                  hour=11, minute=30, end_date='2020-05-20')
-
-scheduler.add_job(start_monitor_no_alert,
-                  trigger = 'cron',
-                  day_of_week='mon-fri', 
-                  hour=12, minute=30, end_date='2020-05-20')
-
-scheduler.add_job(start_monitor,
-                  trigger = 'cron',
-                  day_of_week='mon-fri', 
-                  hour=13, minute=20, end_date='2020-05-20')
-
-scheduler.add_job(start_monitor,
-                  trigger = 'cron',
-                  day_of_week='mon-fri', 
-                  hour=13, minute=32, end_date='2020-05-20')
-
-scheduler.add_job(start_monitor,
-                  trigger = 'cron',
-                  day_of_week='mon-fri', 
-                  hour=14, minute=30, end_date='2020-05-20')
-        
-scheduler.start()
-
-
+#
+#
+#scheduler = BlockingScheduler()
+#
+#scheduler.add_job(start_monitor,
+#                  trigger = 'cron',
+#                  day_of_week='mon-fri', 
+#                  hour=8, minute=30, end_date='2020-05-20')
+#
+#scheduler.add_job(start_monitor,
+#                  trigger = 'cron',
+#                  day_of_week='mon-fri', 
+#                  hour=9, minute=2, end_date='2020-05-20')
+#
+#scheduler.add_job(start_monitor_no_alert,
+#                  trigger = 'cron',
+#                  day_of_week='mon-fri', 
+#                  hour=9, minute=30, end_date='2020-05-20')
+#
+#scheduler.add_job(start_monitor_no_alert,
+#                  trigger = 'cron',
+#                  day_of_week='mon-fri', 
+#                  hour=10, minute=30, end_date='2020-05-20')
+#
+#scheduler.add_job(start_monitor,
+#                  trigger = 'cron',
+#                  day_of_week='mon-fri', 
+#                  hour=11, minute=30, end_date='2020-05-20')
+#
+#scheduler.add_job(start_monitor_no_alert,
+#                  trigger = 'cron',
+#                  day_of_week='mon-fri', 
+#                  hour=12, minute=30, end_date='2020-05-20')
+#
+#scheduler.add_job(start_monitor,
+#                  trigger = 'cron',
+#                  day_of_week='mon-fri', 
+#                  hour=13, minute=20, end_date='2020-05-20')
+#
+#scheduler.add_job(start_monitor,
+#                  trigger = 'cron',
+#                  day_of_week='mon-fri', 
+#                  hour=13, minute=32, end_date='2020-05-20')
+#
+#scheduler.add_job(start_monitor,
+#                  trigger = 'cron',
+#                  day_of_week='mon-fri', 
+#                  hour=14, minute=30, end_date='2020-05-20')
+#        
+#scheduler.start()
+#
+#

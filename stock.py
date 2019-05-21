@@ -12,6 +12,7 @@ import numpy as np
 from datetime import datetime
 import time
 from matplotlib import pyplot as plt
+import peakutils
 
 from talib import abstract
 import talib
@@ -116,8 +117,11 @@ class stock_monitor(object):
             
             self.save_stock_data.update({str(stockno):stock})
             
-            min_price = min(stock.close[-10:len(stock)])
-            max_price = max(stock.close[-10:len(stock)])
+            price = pd.Series(stock.close)
+            highpeak = peakutils.indexes(price, thres=0.5, min_dist=30)[-1]
+            min_price = min(stock.close[highpeak:len(stock)])
+            lowpeak = peakutils.indexes(-price, thres=0.5, min_dist=30)[-1]
+            max_price = max(stock.close[lowpeak:len(stock)])
             
             SMA = talib.MA(np.array(stock.close), 30, matype=0)
             SMA = pd.Series(SMA)
@@ -158,8 +162,8 @@ class stock_monitor(object):
             msg += self.real_price['info']['name']+'的股價: '
             msg += price_now +'\n'
             
-            msg += '10日內最低收盤價: %s \n' % min_price
-            msg += '10日內最高收盤價: %s \n' % max_price
+            msg += '近日低點收盤價: %s \n' % stock.close[lowpeak]
+            msg += '近日高點收盤價: %s \n' % stock.close[highpeak]
             
             KD1 = (d<20) & (k>d)
             if KD1:
@@ -299,7 +303,7 @@ scheduler.add_job(start_monitor,
 scheduler.add_job(start_monitor,
                   trigger = 'cron',
                   day_of_week='mon-fri', 
-                  hour=9, minute=0, end_date='2020-05-20')
+                  hour=9, minute=2, end_date='2020-05-20')
 
 scheduler.add_job(start_monitor_no_alert,
                   trigger = 'cron',
@@ -311,7 +315,7 @@ scheduler.add_job(start_monitor_no_alert,
                   day_of_week='mon-fri', 
                   hour=10, minute=30, end_date='2020-05-20')
 
-scheduler.add_job(start_monitor_no_alert,
+scheduler.add_job(start_monitor,
                   trigger = 'cron',
                   day_of_week='mon-fri', 
                   hour=11, minute=30, end_date='2020-05-20')
@@ -321,10 +325,15 @@ scheduler.add_job(start_monitor_no_alert,
                   day_of_week='mon-fri', 
                   hour=12, minute=30, end_date='2020-05-20')
 
-scheduler.add_job(start_monitor_no_alert,
+scheduler.add_job(start_monitor,
                   trigger = 'cron',
                   day_of_week='mon-fri', 
-                  hour=13, minute=30, end_date='2020-05-20')
+                  hour=13, minute=20, end_date='2020-05-20')
+
+scheduler.add_job(start_monitor,
+                  trigger = 'cron',
+                  day_of_week='mon-fri', 
+                  hour=13, minute=32, end_date='2020-05-20')
 
 scheduler.add_job(start_monitor,
                   trigger = 'cron',

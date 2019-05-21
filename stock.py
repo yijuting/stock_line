@@ -116,6 +116,9 @@ class stock_monitor(object):
             
             self.save_stock_data.update({str(stockno):stock})
             
+            min_price = min(stock.close[-10:len(stock)])
+            max_price = max(stock.close[-10:len(stock)])
+            
             SMA = talib.MA(np.array(stock.close), 30, matype=0)
             SMA = pd.Series(SMA)
             SMA.index = stock.index
@@ -134,19 +137,15 @@ class stock_monitor(object):
                               slowd_matype=0)
             STOCH = pd.DataFrame(K, index = stock.index, columns = ['K'])
             STOCH['D'] = pd.Series(D, index = stock.index, name = 'D')
-            J_df = pd.merge(STOCH.K, STOCH.D, left_index=True, right_index=True).apply(
-                    lambda x: (3*x.K) - (2*x.D), axis = 1)
+            J_df = pd.merge(STOCH.K.to_frame(), STOCH.D.to_frame(), 
+                            left_index=True, right_index=True).apply(
+                                    lambda x: (3*x.K) - (2*x.D), axis = 1)
             
             BIAS = [np.nan]*9+ma_bias_ratio(stock.close, 5, 10)
             BIAS = pd.Series(BIAS)
             BIAS.index = stock.index
             
-            #STOCH.plot()
-            #stock['close'].plot(secondary_y=True)
-            
-            #RSI.plot()
-            #stock['close'].plot(secondary_y=True)
-            
+
             price_now = self.real_price['realtime']['latest_trade_price']
             
             k = STOCH.K[-1]
@@ -159,6 +158,9 @@ class stock_monitor(object):
             msg += self.real_price['info']['name']+'的股價: '
             msg += price_now +'\n'
             
+            msg += '10日內最低收盤價: %s \n' % min_price
+            msg += '10日內最高收盤價: %s \n' % max_price
+            
             KD1 = (d<20) & (k>d)
             if KD1:
                 msg +='up!!!   KD < 20 且 K > D' +'\n'
@@ -166,13 +168,19 @@ class stock_monitor(object):
             KD2 = (d>80) & (k<d)
             if KD2:
                 msg +='down!!! KD > 80 且 K < D' +'\n'
-            
+                
+            min_rsi = min(RSI[-10:len(RSI)])
+            max_rsi = max(RSI[-10:len(RSI)])
             RSI1 = rsi<20
             if RSI1:
+                if (float(price_now)<=min_price)&(rsi>=min_rsi):
+                    "high up!!! 股價新低 但 RSI不是新低"
                 msg += 'up!!!   RSI < 20' +'\n'
             
             RSI2 = rsi>80
             if RSI2:
+                if (float(price_now)>=min_price)&(rsi<=max_rsi):
+                    "risk down!!! 股價新高 但 RSI不是新高"
                 msg += 'down!!! RSI > 80' +'\n'
             
             BIAS1 = bias<-17
@@ -259,41 +267,70 @@ class stock_monitor(object):
 
 #stock_list = ['2484','3036','0050','00677U']
 
-monitor = stock_monitor()
+
 #monitor.manual_monitor(stock_list[], sent_plot)
-
-stock_list = ['2484','3036','3289','1441','00677U']
-sent_plot = False
-
-for stockno in stock_list:
-    monitor.manual_monitor(stockno, sent_plot)
-monitor.sent_routing()
+def start_monitor():
+    monitor = stock_monitor()
+    stock_list = ['2484','3036','3289','1441','00677U']
+    sent_plot = False
     
-#monitor.schedule_monitor(stock_list[0], 20)
+    for stockno in stock_list:
+        monitor.manual_monitor(stockno, sent_plot)
+    monitor.sent_routing()
+    
+def start_monitor_no_alert():
+    monitor = stock_monitor()
+    stock_list = ['2484','3036','3289','1441','00677U']
+    sent_plot = False
+    
+    for stockno in stock_list:
+        monitor.manual_monitor(stockno, sent_plot)
 
 
-#save_stock_data = {}
-#for stockno in stock_list:
-##stockno = stock_list[2]
-#    save_stock_data = stock_warning(save_stock_data, stockno)
-#
-#
-####  schedule modeling
-#start_date = time.strftime('%Y-%m-%d 09:00:00', time.localtime(time.time()))
-#end_date = time.strftime('%Y-%m-%d 13:00:00', time.localtime(time.time()))
-#
-#scheduler = BlockingScheduler()
-#scheduler.add_job(stock_warning,
-#                  trigger = 'interval',
-#                  minutes = 1,
-#                  args=(save_stock_data,stock_list[0],scheduler),
-#                  start_date = start_date,
-#                  end_date = end_date)
-#
-#scheduler.start()
-#
-#
-##selec_month = False
-##year = 2019
-##month = 1
-#5日RSI、KD值和乖離率
+
+
+scheduler = BlockingScheduler()
+
+scheduler.add_job(start_monitor,
+                  trigger = 'cron',
+                  day_of_week='mon-fri', 
+                  hour=8, minute=30, end_date='2020-05-20')
+
+scheduler.add_job(start_monitor,
+                  trigger = 'cron',
+                  day_of_week='mon-fri', 
+                  hour=9, minute=0, end_date='2020-05-20')
+
+scheduler.add_job(start_monitor_no_alert,
+                  trigger = 'cron',
+                  day_of_week='mon-fri', 
+                  hour=9, minute=30, end_date='2020-05-20')
+
+scheduler.add_job(start_monitor_no_alert,
+                  trigger = 'cron',
+                  day_of_week='mon-fri', 
+                  hour=10, minute=30, end_date='2020-05-20')
+
+scheduler.add_job(start_monitor_no_alert,
+                  trigger = 'cron',
+                  day_of_week='mon-fri', 
+                  hour=11, minute=30, end_date='2020-05-20')
+
+scheduler.add_job(start_monitor_no_alert,
+                  trigger = 'cron',
+                  day_of_week='mon-fri', 
+                  hour=12, minute=30, end_date='2020-05-20')
+
+scheduler.add_job(start_monitor_no_alert,
+                  trigger = 'cron',
+                  day_of_week='mon-fri', 
+                  hour=13, minute=30, end_date='2020-05-20')
+
+scheduler.add_job(start_monitor,
+                  trigger = 'cron',
+                  day_of_week='mon-fri', 
+                  hour=14, minute=30, end_date='2020-05-20')
+        
+scheduler.start()
+
+

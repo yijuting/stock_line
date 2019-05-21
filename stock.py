@@ -137,9 +137,9 @@ class stock_monitor(object):
                               slowd_matype=0)
             STOCH = pd.DataFrame(K, index = stock.index, columns = ['K'])
             STOCH['D'] = pd.Series(D, index = stock.index, name = 'D')
-            J_df = pd.merge(STOCH.K.to_frame(), STOCH.D.to_frame(), 
-                            left_index=True, right_index=True).apply(
-                                    lambda x: (3*x.K) - (2*x.D), axis = 1)
+#            J_df = pd.merge(STOCH.K.to_frame(), STOCH.D.to_frame(), 
+#                            left_index=True, right_index=True).apply(
+#                                    lambda x: (3*x.K) - (2*x.D), axis = 1)
             
             BIAS = [np.nan]*9+ma_bias_ratio(stock.close, 5, 10)
             BIAS = pd.Series(BIAS)
@@ -155,17 +155,19 @@ class stock_monitor(object):
             
             price = pd.Series(stock.close)
             highpeak = peakutils.indexes(price, thres=0.5, min_dist=30)[-1]
-            max_price = stock.close[highpeak]
             lowpeak = peakutils.indexes(-price, thres=0.5, min_dist=30)[-1]
-            min_price = stock.close[lowpeak]
             up_now = highpeak<lowpeak
 
             msg = self.real_price['info']['code']
             msg += self.real_price['info']['name']+'的股價: '
             msg += price_now +'\n'
 
+            min_rsi = min(RSI[highpeak:len(RSI)])
+            max_rsi = max(RSI[lowpeak:len(RSI)])
+
             if up_now:
                 msg += '近日趨勢上漲中 \n'
+
             else:
                 msg += '近日趨勢下降中 \n'
             
@@ -184,20 +186,22 @@ class stock_monitor(object):
             if KD2:
                 msg +='down!!! KD > 80 且 K < D' +'\n'
                 
-            min_rsi = min(RSI[highpeak:len(RSI)])
-            max_rsi = max(RSI[lowpeak:len(RSI)])
+
             RSI1 = rsi<20
             if RSI1:
                 temp_min = min(stock.close[highpeak:len(stock)])
                 if (float(price_now)<=temp_min)&(rsi>=min_rsi)&(~up_now):
                     msg += "high up!!! 股價新低 但 RSI不是新低"
+                    msg += '歷史 min RSI = '+str(round(min_rsi,0))+'\n'
                 msg += 'up!!!   RSI < 20' +'\n'
             
             RSI2 = rsi>80
             if RSI2:
                 temp_max = max(stock.close[lowpeak:len(stock)])
+
                 if (float(price_now)>=temp_max)&(rsi<=max_rsi)&up_now:
                     msg += "risk down!!! 股價新高 但 RSI不是新高"
+                    msg += '歷史 Max RSI = '+str(round(max_rsi,0))+'\n'
                 msg += 'down!!! RSI > 80' +'\n'
             
             BIAS1 = bias<-17
@@ -211,6 +215,7 @@ class stock_monitor(object):
             msg += 'K = ' + str(round(k,0)) +'\n'
             msg += 'D = ' + str(round(d,0)) +'\n'
             msg += 'RSI = ' + str(round(rsi,0))+'\n' 
+             
             msg += '乖離率 = ' + str(round(bias,0))+'\n' 
             #msg += '\n'
             #msg += str(real_price['realtime'])
@@ -259,6 +264,9 @@ class stock_monitor(object):
         
     
     def manual_monitor(self, stockno,sent_plot = False):
+        if not self.save_stock_data:
+            msg = '======new notification====='
+            lineNotify(self.token, msg)
         self.stockno = stockno
         self.scheduler = None
         self.sent_plot = sent_plot
@@ -287,6 +295,7 @@ class stock_monitor(object):
 
 #monitor.manual_monitor(stock_list[], sent_plot)
 def start_monitor():
+
     monitor = stock_monitor()
     stock_list = ['2484','3036','3289','1441','00677U']
     sent_plot = False

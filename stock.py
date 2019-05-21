@@ -158,7 +158,7 @@ class stock_monitor(object):
             min_price = min(stock.close[highpeak:len(stock)])
             lowpeak = peakutils.indexes(-price, thres=0.5, min_dist=30)[-1]
             max_price = max(stock.close[lowpeak:len(stock)])
-            up_or_not = highpeak<lowpeak
+            up_or_not = lowpeak<highpeak
 
             msg = self.real_price['info']['code']
             msg += self.real_price['info']['name']+'的股價: '

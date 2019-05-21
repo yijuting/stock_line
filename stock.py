@@ -155,19 +155,26 @@ class stock_monitor(object):
             
             price = pd.Series(stock.close)
             highpeak = peakutils.indexes(price, thres=0.5, min_dist=30)[-1]
-            min_price = min(stock.close[highpeak:len(stock)])
+            max_price = stock.close[highpeak]
             lowpeak = peakutils.indexes(-price, thres=0.5, min_dist=30)[-1]
-            max_price = max(stock.close[lowpeak:len(stock)])
-            up_or_not = lowpeak<highpeak
+            min_price = stock.close[lowpeak]
+            up_now = highpeak<lowpeak
 
             msg = self.real_price['info']['code']
             msg += self.real_price['info']['name']+'的股價: '
             msg += price_now +'\n'
-            
-            if up_or_not:
-                msg += '近日低點收盤價: %s \n' % stock.close[lowpeak]
+
+            if up_now:
+                msg += '近日趨勢上漲中 \n'
             else:
-                msg += '近日高點收盤價: %s \n' % stock.close[highpeak]
+                msg += '近日趨勢下降中 \n'
+            
+            temp = time.strptime(str(price.index[highpeak]), "%Y-%m-%d %H:%M:%S")
+            temp = time.strftime("%m/%d",temp)
+            msg += '%s最近高點: %s \n' % (temp,stock.close[highpeak])            
+            temp = time.strptime(str(price.index[lowpeak]), "%Y-%m-%d %H:%M:%S")
+            temp = time.strftime("%m/%d",temp)
+            msg += '%s最近低點: %s \n' % (temp,stock.close[lowpeak])   
             
             KD1 = (d<20) & (k>d)
             if KD1:
@@ -181,13 +188,15 @@ class stock_monitor(object):
             max_rsi = max(RSI[-10:len(RSI)])
             RSI1 = rsi<20
             if RSI1:
-                if (float(price_now)<=min_price)&(rsi>=min_rsi)&(~up_or_not):
+                temp_min = min(stock.close[highpeak:len(stock)])
+                if (float(price_now)<=temp_min)&(rsi>=min_rsi)&(~up_now):
                     "high up!!! 股價新低 但 RSI不是新低"
                 msg += 'up!!!   RSI < 20' +'\n'
             
             RSI2 = rsi>80
             if RSI2:
-                if (float(price_now)>=max_price)&(rsi<=max_rsi)&up_or_not:
+                temp_max = max(stock.close[lowpeak:len(stock)])
+                if (float(price_now)>=temp_max)&(rsi<=max_rsi)&up_now:
                     "risk down!!! 股價新高 但 RSI不是新高"
                 msg += 'down!!! RSI > 80' +'\n'
             

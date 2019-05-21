@@ -295,55 +295,55 @@ def start_monitor_no_alert():
         monitor.manual_monitor(stockno, sent_plot)
 
 
-#
-#
-#scheduler = BlockingScheduler()
-#
-#scheduler.add_job(start_monitor,
-#                  trigger = 'cron',
-#                  day_of_week='mon-fri', 
-#                  hour=8, minute=30, end_date='2020-05-20')
-#
-#scheduler.add_job(start_monitor,
-#                  trigger = 'cron',
-#                  day_of_week='mon-fri', 
-#                  hour=9, minute=2, end_date='2020-05-20')
-#
-#scheduler.add_job(start_monitor_no_alert,
-#                  trigger = 'cron',
-#                  day_of_week='mon-fri', 
-#                  hour=9, minute=30, end_date='2020-05-20')
-#
-#scheduler.add_job(start_monitor_no_alert,
-#                  trigger = 'cron',
-#                  day_of_week='mon-fri', 
-#                  hour=10, minute=30, end_date='2020-05-20')
-#
-#scheduler.add_job(start_monitor,
-#                  trigger = 'cron',
-#                  day_of_week='mon-fri', 
-#                  hour=11, minute=30, end_date='2020-05-20')
-#
-#scheduler.add_job(start_monitor_no_alert,
-#                  trigger = 'cron',
-#                  day_of_week='mon-fri', 
-#                  hour=12, minute=30, end_date='2020-05-20')
-#
-#scheduler.add_job(start_monitor,
-#                  trigger = 'cron',
-#                  day_of_week='mon-fri', 
-#                  hour=13, minute=20, end_date='2020-05-20')
-#
-#scheduler.add_job(start_monitor,
-#                  trigger = 'cron',
-#                  day_of_week='mon-fri', 
-#                  hour=13, minute=32, end_date='2020-05-20')
-#
-#scheduler.add_job(start_monitor,
-#                  trigger = 'cron',
-#                  day_of_week='mon-fri', 
-#                  hour=14, minute=30, end_date='2020-05-20')
-#        
-#scheduler.start()
-#
-#
+
+
+scheduler = BlockingScheduler()
+
+scheduler.add_job(start_monitor,
+                  trigger = 'cron',
+                  day_of_week='mon-fri', 
+                  hour=8, minute=30, end_date='2020-05-20')
+
+scheduler.add_job(start_monitor,
+                  trigger = 'cron',
+                  day_of_week='mon-fri', 
+                  hour=9, minute=2, end_date='2020-05-20')
+
+scheduler.add_job(start_monitor_no_alert,
+                  trigger = 'cron',
+                  day_of_week='mon-fri', 
+                  hour=9, minute=30, end_date='2020-05-20')
+
+scheduler.add_job(start_monitor_no_alert,
+                  trigger = 'cron',
+                  day_of_week='mon-fri', 
+                  hour=10, minute=30, end_date='2020-05-20')
+
+scheduler.add_job(start_monitor,
+                  trigger = 'cron',
+                  day_of_week='mon-fri', 
+                  hour=11, minute=30, end_date='2020-05-20')
+
+scheduler.add_job(start_monitor_no_alert,
+                  trigger = 'cron',
+                  day_of_week='mon-fri', 
+                  hour=12, minute=30, end_date='2020-05-20')
+
+scheduler.add_job(start_monitor,
+                  trigger = 'cron',
+                  day_of_week='mon-fri', 
+                  hour=13, minute=20, end_date='2020-05-20')
+
+scheduler.add_job(start_monitor,
+                  trigger = 'cron',
+                  day_of_week='mon-fri', 
+                  hour=13, minute=32, end_date='2020-05-20')
+
+scheduler.add_job(start_monitor,
+                  trigger = 'cron',
+                  day_of_week='mon-fri', 
+                  hour=14, minute=35, end_date='2020-05-20')
+        
+scheduler.start()
+
+

@@ -184,8 +184,8 @@ class stock_monitor(object):
             if KD2:
                 msg +='down!!! KD > 80 且 K < D' +'\n'
                 
-            min_rsi = min(RSI[-10:len(RSI)])
-            max_rsi = max(RSI[-10:len(RSI)])
+            min_rsi = min(RSI[highpeak:len(RSI)])
+            max_rsi = max(RSI[lowpeak:len(RSI)])
             RSI1 = rsi<20
             if RSI1:
                 temp_min = min(stock.close[highpeak:len(stock)])
@@ -321,24 +321,24 @@ scheduler.add_job(start_monitor,
 scheduler.add_job(start_monitor_no_alert,
                   trigger = 'cron',
                   day_of_week='mon-fri', 
-                  hour=9, minute=30, end_date='2020-05-20')
+                  hour=10, minute=0, end_date='2020-05-20')
 
 scheduler.add_job(start_monitor_no_alert,
                   trigger = 'cron',
                   day_of_week='mon-fri', 
-                  hour=10, minute=30, end_date='2020-05-20')
+                  hour=11, minute=0, end_date='2020-05-20')
 
 scheduler.add_job(start_monitor,
                   trigger = 'cron',
                   day_of_week='mon-fri', 
-                  hour=11, minute=30, end_date='2020-05-20')
+                  hour=12, minute=0, end_date='2020-05-20')
 
 scheduler.add_job(start_monitor_no_alert,
                   trigger = 'cron',
                   day_of_week='mon-fri', 
                   hour=12, minute=30, end_date='2020-05-20')
 
-scheduler.add_job(start_monitor,
+scheduler.add_job(start_monitor_no_alert,
                   trigger = 'cron',
                   day_of_week='mon-fri', 
                   hour=13, minute=20, end_date='2020-05-20')

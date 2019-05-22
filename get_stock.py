@@ -195,10 +195,13 @@ def get_index(stock):
                 cost_cum = 0
                 sell_cum += [date,]
                 sell_price += [price,]
+                
     result = {stockno:{'budget':budget,
                        'earn':money,
                        'buy':buy_cum,'buy_price':buy_price,
-                       'sell':sell_cum,'sell_price':sell_price}}
+                       'sell':sell_cum,'sell_price':sell_price,
+                       'care':buy[-1],
+                       'index':(rsi,k,d,bias)}}
     time.sleep(30)
             
     return result
@@ -211,6 +214,7 @@ with open('stock_name.pickle', 'rb') as handle:
 #    history = pickle.load(handle)
 
 history = {'calculate':[]}
+care = {}
 
 count=1
 for ind,(stockno,_) in enumerate(stock_code_list.items()):
@@ -220,6 +224,9 @@ for ind,(stockno,_) in enumerate(stock_code_list.items()):
             time.sleep(300)
             with open('history.pickle', 'wb') as handle:
                 pickle.dump(history, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            with open('care.pickle', 'wb') as handle:
+                pickle.dump(care, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
         print(ind,stockno)
         if len(stockno)==4:
             stock = get_data(stockno)
@@ -227,6 +234,8 @@ for ind,(stockno,_) in enumerate(stock_code_list.items()):
             print(result)
             if result[stockno]['earn']!=0:
                 history.update(result)
+            if result[stockno]['care']>0:
+                care.update(result)
         history['calculate'].append(stockno)
 
 

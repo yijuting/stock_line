@@ -98,6 +98,7 @@ class stock_monitor(object):
                 stock_data = twstock.Stock(str(stockno))
                 year = datetime.now().year
                 month = datetime.now().month-2
+                year = year if month>=1 else year-1
                 month = month if month>=1 else month+12
                 data = stock_data.fetch_from(year, month)
 
@@ -152,8 +153,8 @@ class stock_monitor(object):
             lowpeak = peakutils.indexes(-price, thres=0.5, min_dist=30)[-1]
             up_now = highpeak<lowpeak
             
-            days = len(stock)-min(highpeak,lowpeak)
-            bias = ma_bias_ratio(stock.close, 10)
+            days = len(stock)-max(highpeak,lowpeak)
+            bias = ma_bias_ratio(stock.close, days)
 
             msg = self.real_price['info']['code']
             msg += self.real_price['info']['name']+'的股價: '
@@ -251,9 +252,8 @@ class stock_monitor(object):
             print(msg)
 
     def sent_routing(self):
-        if not self.msg:
-            msg = self.real_price['info']['time']+'\n' + self.msg
-            lineNotify(self.token, msg)
+        msg = self.real_price['info']['time']+'\n' + self.msg
+        lineNotify(self.token, msg)
         
     
     def manual_monitor(self, stockno,sent_plot = False):

@@ -6,23 +6,23 @@ Created on Wed May 22 18:13:18 2019
 """
 
 
-import requests
+
 from io import StringIO
 import pandas as pd
 import numpy as np
 from datetime import datetime
 import time
-from matplotlib import pyplot as plt
+
 import peakutils
 
-from talib import abstract
+
 import talib
 import twstock
 import copy
 
 import pickle
 
-import numpy as np
+
 def find_nearest(array,value):
     idx = (np.abs(array-value)).argmin()
     if array[idx]<value:
@@ -53,6 +53,7 @@ def get_data(stockno, month_before = 6):
     stock.columns = ['open', 'close', 'high', 'low', 'volume']
     stock['volume'] = stock['volume'].apply(lambda x:float(x)/1000)
     stock.index = data.date
+    time.sleep(30)
     return stock
 
 
@@ -87,10 +88,12 @@ def get_index(stock):
     
     buy = []
     for ind,date in enumerate(stock.index):
-        if ind>=40:
+        near_peak = find_nearest(np.array(peak),ind)
+        bias = ma_bias_ratio(stock.close, ind-near_peak)
+        if ind>=10:
             price_now = stock.open[ind]
-            near_peak = find_nearest(np.array(peak),ind)
-            bias = ma_bias_ratio(stock.close, ind-near_peak)
+            
+            
             k = K[ind]
             d = D[ind]
             rsi = RSI[ind]
@@ -156,7 +159,7 @@ def get_index(stock):
         cost_cum = 0
         for ind,date in enumerate(stock.index):
             price = stock.open[ind]
-            if ind>40:
+            if ind>10:
                 buy_stock = buy[ind]
                 if (buy_stock>1)&(budget/2/(price*1000)>0):
                     count = int(budget/2/(price*1000))
@@ -171,7 +174,7 @@ def get_index(stock):
                     buy_price += [price,]
 
                 if (buy_count>0):
-                    if (buy_stock==-1):
+                    if (buy_stock<0):
                         earn = price*1000*(1-0.003855)*buy_count
                         budget+=earn
                         money += earn
@@ -181,9 +184,10 @@ def get_index(stock):
                         sell_price += [price,]
                     else:
                         earn = price*1000*(1-0.003855)*buy_count
-                        if (earn-cost_cum)/cost_cum>0.03:
+                        if (earn-cost_cum)/cost_cum>0.05:
                             budget += earn
                             money += earn
+                            buy_count-=buy_count  
                             cost_cum = 0
                             sell_cum += [date,]
                             sell_price += [price,]
@@ -201,35 +205,41 @@ def get_index(stock):
                        'buy':buy_cum,'buy_price':buy_price,
                        'sell':sell_cum,'sell_price':sell_price,
                        'care':buy[-1],
-                       'index':(rsi,k,d,bias)}}
-    time.sleep(30)
-            
+                       'index':(RSI[-1],K[-1],D[-1],bias)}}
+
     return result
 
 
 with open('stock_name.pickle', 'rb') as handle:
     stock_code_list = pickle.load(handle)
     
-#with open('history.pickle', 'rb') as handle:
-#    history = pickle.load(handle)
-
-history = {'calculate':[]}
-care = {}
-
+with open('history.pickle', 'rb') as handle:
+    history = pickle.load(handle)
+with open('care.pickle', 'rb') as handle:
+    care = pickle.load(handle)
+#
+#history = {'calculate':[]}
+#care = {}
+#
 count=1
 for ind,(stockno,_) in enumerate(stock_code_list.items()):
     if stockno not in history['calculate']:
         count+=1
         if count%5==1:
             time.sleep(300)
-            with open('history.pickle', 'wb') as handle:
-                pickle.dump(history, handle, protocol=pickle.HIGHEST_PROTOCOL)
-            with open('care.pickle', 'wb') as handle:
-                pickle.dump(care, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
+        else:
+            time.sleep(count%5*10)
         print(ind,stockno)
         if len(stockno)==4:
-            stock = get_data(stockno)
+            try:
+                stock = get_data(stockno)
+            except:
+                try:
+                    time.sleep(60*30)
+                    stock = get_data(stockno)
+                except:
+                    time.sleep(60*30*2)
+                    stock = get_data(stockno)                   
             result = get_index(stock)
             print(result)
             if result[stockno]['earn']!=0:
@@ -237,9 +247,7 @@ for ind,(stockno,_) in enumerate(stock_code_list.items()):
             if result[stockno]['care']>0:
                 care.update(result)
         history['calculate'].append(stockno)
-
-
-
-
-
-
+        with open('history.pickle', 'wb') as handle:
+            pickle.dump(history, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        with open('care.pickle', 'wb') as handle:
+            pickle.dump(care, handle, protocol=pickle.HIGHEST_PROTOCOL)

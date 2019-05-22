@@ -24,31 +24,24 @@ from plot_candles import *
 stock_list = ['2484','3036','3289','1441']
 #,'00677U'
 
-def moving_average(data, days):
-    result = []
-    data = data[:]
-    for _ in range(len(data) - days + 1):
-        result.append(round(sum(data[-days:]) / days, 2))
-        data.pop()
-    return result[::-1]
 
-def ma_bias_ratio(price, day1, day2):
+
+def ma_bias_ratio(price, day1):
     """Calculate moving average bias ratio"""
     price = list(price)
-    data1 = moving_average(price, day1)
-    data2 = moving_average(price, day2)
-    result = [data1[-i] - data2[-i] for i in range(1, min(len(data1), len(data2)) + 1)]
-    return result[::-1]
+    average = np.mean(price)
+    price_now = price[-1]
+    return (price_now-average)/average*100
 
 class stock_monitor(object):
     def __init__(self):    
         self. save_stock_data = {}
         self.msg = ""
         ###群組的
-        self.token = "Z5Cg6UUou2ipMn2orBmEm4rZ6b7nbBBhbctzff9Ch2u"
+#        self.token = "Z5Cg6UUou2ipMn2orBmEm4rZ6b7nbBBhbctzff9Ch2u"
         
         ##1:1test
-#        self.token = "tvDdPhFVpc2Dafuk6SOuez7arByOG4mxBauVTAQXuZO"
+        self.token = "tvDdPhFVpc2Dafuk6SOuez7arByOG4mxBauVTAQXuZO"
 
     def get_real_stock(self,stockno):
         real_price = twstock.realtime.get(str(stockno))
@@ -145,22 +138,22 @@ class stock_monitor(object):
 #                            left_index=True, right_index=True).apply(
 #                                    lambda x: (3*x.K) - (2*x.D), axis = 1)
             
-            BIAS = [np.nan]*9+ma_bias_ratio(stock.close, 5, 10)
-            BIAS = pd.Series(BIAS)
-            BIAS.index = stock.index
-            
+
 
             price_now = self.real_price['realtime']['latest_trade_price']
             
             k = STOCH.K[-1]
             d = STOCH.D[-1]
             rsi = RSI[-1] 
-            bias = BIAS[-1]
+
             
             price = pd.Series(stock.close)
             highpeak = peakutils.indexes(price, thres=0.5, min_dist=30)[-1]
             lowpeak = peakutils.indexes(-price, thres=0.5, min_dist=30)[-1]
             up_now = highpeak<lowpeak
+            
+            days = len(stock)-min(highpeak,lowpeak)
+            bias = ma_bias_ratio(stock.close, 10)
 
             msg = self.real_price['info']['code']
             msg += self.real_price['info']['name']+'的股價: '
@@ -182,11 +175,11 @@ class stock_monitor(object):
             temp = time.strftime("%m/%d",temp)
             msg += '%s最近低點: %s \n' % (temp,stock.close[lowpeak])   
             
-            KD1 = (d<20) & (k>d)
+            KD1 = (k<20) & (d<20) & (k>d)
             if KD1:
                 msg +='up!!!   KD < 20 且 K > D' +'\n'
                 
-            KD2 = (d>80) & (k<d)
+            KD2 = (k>80) &(d>80) & (k<d)
             if KD2:
                 msg +='down!!! KD > 80 且 K < D' +'\n'
                 
@@ -239,8 +232,8 @@ class stock_monitor(object):
                     title = stockno,                      ## 名稱而已
                     volume_bars=True,               ## 畫不畫 量圖
                     overlays=[SMA,price_now],                    ##  跟股價圖 疊起來的是什麼指標
-                    technicals = [RSI, STOCH, BIAS],    ## 其他圖要畫甚麼
-                    technicals_titles=['RSI', 'KD','BIAS'] ## 其他圖的名稱
+                    technicals = [RSI, STOCH],    ## 其他圖要畫甚麼
+                    technicals_titles=['RSI', 'KD'] ## 其他圖的名稱
                     )        
             if KD1 or KD2 or RSI1 or RSI2 or self.sent_plot:
                 msg = self.real_price['info']['time']+'\n' + msg
@@ -258,8 +251,9 @@ class stock_monitor(object):
             print(msg)
 
     def sent_routing(self):
-        msg = self.real_price['info']['time']+'\n' + self.msg
-        lineNotify(self.token, msg)
+        if not self.msg:
+            msg = self.real_price['info']['time']+'\n' + self.msg
+            lineNotify(self.token, msg)
         
     
     def manual_monitor(self, stockno,sent_plot = False):
@@ -302,25 +296,27 @@ def start_monitor_no_alert():
 
 scheduler = BlockingScheduler()
 
-scheduler.add_job(start_monitor,
-                  trigger = 'cron',
-                  day_of_week='mon-fri', 
-                  hour=8, minute=30, end_date='2020-05-20')
+
 
 scheduler.add_job(start_monitor,
                   trigger = 'cron',
                   day_of_week='mon-fri', 
                   hour=9, minute=2, end_date='2020-05-20')
 
-scheduler.add_job(start_monitor_no_alert,
+scheduler.add_job(start_monitor,
                   trigger = 'cron',
                   day_of_week='mon-fri', 
-                  hour=10, minute=0, end_date='2020-05-20')
+                  hour=9, minute=30, end_date='2020-05-20')
 
 scheduler.add_job(start_monitor_no_alert,
                   trigger = 'cron',
                   day_of_week='mon-fri', 
-                  hour=11, minute=0, end_date='2020-05-20')
+                  hour=10, minute=30, end_date='2020-05-20')
+
+scheduler.add_job(start_monitor_no_alert,
+                  trigger = 'cron',
+                  day_of_week='mon-fri', 
+                  hour=11, minute=30, end_date='2020-05-20')
 
 scheduler.add_job(start_monitor,
                   trigger = 'cron',

@@ -45,10 +45,10 @@ class stock_monitor(object):
         self. save_stock_data = {}
         self.msg = ""
         ###群組的
-        self.token = "Z5Cg6UUou2ipMn2orBmEm4rZ6b7nbBBhbctzff9Ch2u"
+#        self.token = "Z5Cg6UUou2ipMn2orBmEm4rZ6b7nbBBhbctzff9Ch2u"
         
         ##1:1test
-#        self.token = "tvDdPhFVpc2Dafuk6SOuez7arByOG4mxBauVTAQXuZO"
+        self.token = "tvDdPhFVpc2Dafuk6SOuez7arByOG4mxBauVTAQXuZO"
 
     def get_real_stock(self,stockno):
         real_price = twstock.realtime.get(str(stockno))
@@ -209,7 +209,7 @@ class stock_monitor(object):
             min_rsi = min(RSI[highpeak:len(RSI)])
             temp_min = min(stock.low[highpeak:len(stock)])
             if (float(price_now)<=temp_min)&(rsi>=min_rsi)&(~up_now):
-                msg += "high up!!! 股價新低 但 RSI不是新低"
+                msg += "high up!!! 股價新低 但 RSI不是新低"+'\n'
             
             RSI2 = rsi>80
             if RSI2:
@@ -218,7 +218,7 @@ class stock_monitor(object):
             max_rsi = max(RSI[lowpeak:len(RSI)])
             temp_max = min(stock.high[lowpeak:len(stock)])
             if (float(price_now)>=temp_max)&(rsi<=max_rsi)&up_now:
-                msg += "risk down!!! 股價新高 但 RSI不是新高"
+                msg += "risk down!!! 股價新高 但 RSI不是新高"+'\n'
                 
             BIAS1 = bias<-17
             if BIAS1:
@@ -274,14 +274,12 @@ class stock_monitor(object):
             print(msg)
 
     def sent_routing(self):
-        msg = self.real_price['info']['time']+'\n' + self.msg
+        
         lineNotify(self.token, msg)
         
     
     def manual_monitor(self, stockno,sent_plot = False):
-        if not self.save_stock_data:
-            msg = '======new notification====='
-            lineNotify(self.token, msg)
+
         self.stockno = stockno
 
         self.sent_plot = sent_plot
@@ -298,7 +296,8 @@ class stock_monitor(object):
 def start_monitor():
 
     monitor = stock_monitor()
-    
+    msg = '======new notification====='
+    lineNotify(monitor.token, msg)
     sent_plot = False
     
     for stockno in stock_list:
@@ -313,58 +312,58 @@ def start_monitor_no_alert():
     for stockno in stock_list:
         monitor.manual_monitor(stockno, sent_plot)
 
-#start_monitor()
+start_monitor()
 
-
-scheduler = BlockingScheduler()
-
-
-
-scheduler.add_job(start_monitor,
-                  trigger = 'cron',
-                  day_of_week='mon-fri', 
-                  hour=9, minute=2, end_date='2020-05-20')
-
-scheduler.add_job(start_monitor,
-                  trigger = 'cron',
-                  day_of_week='mon-fri', 
-                  hour=9, minute=30, end_date='2020-05-20')
-
-scheduler.add_job(start_monitor_no_alert,
-                  trigger = 'cron',
-                  day_of_week='mon-fri', 
-                  hour=10, minute=30, end_date='2020-05-20')
-
-scheduler.add_job(start_monitor_no_alert,
-                  trigger = 'cron',
-                  day_of_week='mon-fri', 
-                  hour=11, minute=30, end_date='2020-05-20')
-
-scheduler.add_job(start_monitor,
-                  trigger = 'cron',
-                  day_of_week='mon-fri', 
-                  hour=12, minute=0, end_date='2020-05-20')
-
-scheduler.add_job(start_monitor_no_alert,
-                  trigger = 'cron',
-                  day_of_week='mon-fri', 
-                  hour=12, minute=30, end_date='2020-05-20')
-
-scheduler.add_job(start_monitor_no_alert,
-                  trigger = 'cron',
-                  day_of_week='mon-fri', 
-                  hour=13, minute=20, end_date='2020-05-20')
-
-scheduler.add_job(start_monitor,
-                  trigger = 'cron',
-                  day_of_week='mon-fri', 
-                  hour=13, minute=32, end_date='2020-05-20')
-
-scheduler.add_job(start_monitor,
-                  trigger = 'cron',
-                  day_of_week='mon-fri', 
-                  hour=14, minute=35, end_date='2020-05-20')
-        
-scheduler.start()
+#
+#scheduler = BlockingScheduler()
+#
+#
+#
+#scheduler.add_job(start_monitor,
+#                  trigger = 'cron',
+#                  day_of_week='mon-fri', 
+#                  hour=9, minute=2, end_date='2020-05-20')
+#
+#scheduler.add_job(start_monitor,
+#                  trigger = 'cron',
+#                  day_of_week='mon-fri', 
+#                  hour=9, minute=30, end_date='2020-05-20')
+#
+#scheduler.add_job(start_monitor_no_alert,
+#                  trigger = 'cron',
+#                  day_of_week='mon-fri', 
+#                  hour=10, minute=35, end_date='2020-05-20')
+#
+#scheduler.add_job(start_monitor_no_alert,
+#                  trigger = 'cron',
+#                  day_of_week='mon-fri', 
+#                  hour=11, minute=30, end_date='2020-05-20')
+#
+#scheduler.add_job(start_monitor,
+#                  trigger = 'cron',
+#                  day_of_week='mon-fri', 
+#                  hour=12, minute=0, end_date='2020-05-20')
+#
+#scheduler.add_job(start_monitor_no_alert,
+#                  trigger = 'cron',
+#                  day_of_week='mon-fri', 
+#                  hour=12, minute=30, end_date='2020-05-20')
+#
+#scheduler.add_job(start_monitor_no_alert,
+#                  trigger = 'cron',
+#                  day_of_week='mon-fri', 
+#                  hour=13, minute=20, end_date='2020-05-20')
+#
+#scheduler.add_job(start_monitor,
+#                  trigger = 'cron',
+#                  day_of_week='mon-fri', 
+#                  hour=13, minute=32, end_date='2020-05-20')
+#
+#scheduler.add_job(start_monitor,
+#                  trigger = 'cron',
+#                  day_of_week='mon-fri', 
+#                  hour=14, minute=35, end_date='2020-05-20')
+#        
+#scheduler.start()
 
 

@@ -80,18 +80,21 @@ def get_index(stock):
     data['K'] = pd.Series(K, index = stock.index, name = 'K')
     data['RSI'] = RSI
     
-    price = pd.Series(stock.close)
+    
     peak = []
+    price = pd.Series(stock.high)
     highpeak = list(peakutils.indexes(price, thres=0.5, min_dist=30))
     if not highpeak:
         highpeak = [np.array(price).argmax(),]
     peak += highpeak
+    price = pd.Series(stock.low)
     lowpeak = list(peakutils.indexes(-price, thres=0.5, min_dist=30))
     if not lowpeak:
         lowpeak = [np.array(price).argmin(),]
     peak += lowpeak
     peak.sort()
 #    print(highpeak,lowpeak)
+    price = pd.Series(stock.close)
     
     buy = []
     for ind,date in enumerate(stock.index):

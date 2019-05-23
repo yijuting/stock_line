@@ -169,8 +169,8 @@ class stock_monitor(object):
             msg += self.real_price['info']['name']+'的股價: '
             msg += price_now +'\n'
 
-            min_rsi = min(RSI[highpeak:len(RSI)])
-            max_rsi = max(RSI[lowpeak:len(RSI)])
+            
+            
 
             if up_now:
                 msg += '近日趨勢上漲中 \n'
@@ -196,21 +196,24 @@ class stock_monitor(object):
 
             RSI1 = rsi<20
             if RSI1:
-                temp_min = min(stock.low[highpeak:len(stock)])
-                if (float(price_now)<=temp_min)&(rsi>=min_rsi)&(~up_now):
-                    msg += "high up!!! 股價新低 但 RSI不是新低"
-                    msg += '歷史 min RSI = '+str(round(min_rsi,0))+'\n'
                 msg += 'up!!!   RSI < 20' +'\n'
+                
+            min_rsi = min(RSI[highpeak:len(RSI)])
+            temp_min = min(stock.low[highpeak:len(stock)])
+            if (float(price_now)<=temp_min)&(rsi>=min_rsi)&(~up_now):
+                msg += "high up!!! 股價新低 但 RSI不是新低"
+                msg += '歷史 min RSI = '+str(round(min_rsi,0))+'\n'
             
             RSI2 = rsi>80
             if RSI2:
                 temp_max = max(stock.high[lowpeak:len(stock)])
-
-                if (float(price_now)>=temp_max)&(rsi<=max_rsi)&up_now:
-                    msg += "risk down!!! 股價新高 但 RSI不是新高"
-                    msg += '歷史 Max RSI = '+str(round(max_rsi,0))+'\n'
                 msg += 'down!!! RSI > 80' +'\n'
             
+            max_rsi = max(RSI[lowpeak:len(RSI)])
+            if (float(price_now)>=temp_max)&(rsi<=max_rsi)&up_now:
+                msg += "risk down!!! 股價新高 但 RSI不是新高"
+                msg += '歷史 Max RSI = '+str(round(max_rsi,0))+'\n'      
+                
             BIAS1 = bias<-17
             if BIAS1:
                 msg += 'up!!! BIAS < -17' +'\n'

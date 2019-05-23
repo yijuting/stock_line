@@ -150,9 +150,9 @@ class stock_monitor(object):
 
             price_now = self.real_price['realtime']['latest_trade_price']
             
-            k = STOCH.K[-1]
-            d = STOCH.D[-1]
-            rsi = RSI[-1] 
+            k = list(STOCH.K)[-1]
+            d = list(STOCH.D)[-1]
+            rsi = list(RSI)[-1] 
 
             
             price = pd.Series(stock.high)
@@ -210,18 +210,15 @@ class stock_monitor(object):
             temp_min = min(stock.low[highpeak:len(stock)])
             if (float(price_now)<=temp_min)&(rsi>=min_rsi)&(~up_now):
                 msg += "high up!!! 股價新低 但 RSI不是新低"
-                msg += '歷史 min RSI = '+str(round(min_rsi,0))+'\n'
             
             RSI2 = rsi>80
             if RSI2:
-                temp_max = max(stock.high[lowpeak:len(stock)])
                 msg += 'down!!! RSI > 80' +'\n'
             
             max_rsi = max(RSI[lowpeak:len(RSI)])
             temp_max = min(stock.high[lowpeak:len(stock)])
             if (float(price_now)>=temp_max)&(rsi<=max_rsi)&up_now:
                 msg += "risk down!!! 股價新高 但 RSI不是新高"
-                msg += '歷史 Max RSI = '+str(round(max_rsi,0))+'\n'      
                 
             BIAS1 = bias<-17
             if BIAS1:
@@ -234,6 +231,10 @@ class stock_monitor(object):
             msg += 'K = ' + str(round(k,0)) +'\n'
             msg += 'D = ' + str(round(d,0)) +'\n'
             msg += 'RSI = ' + str(round(rsi,0))+'\n' 
+            if up_now:
+                msg += 'Max RSI = '+str(round(max_rsi,0))+'\n'
+            else:
+                msg += 'min RSI = '+str(round(min_rsi,0))+'\n'
              
             msg += '乖離率 = ' + str(round(bias,0))+'\n' 
             #msg += '\n'

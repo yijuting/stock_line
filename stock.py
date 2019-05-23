@@ -45,10 +45,10 @@ class stock_monitor(object):
         self. save_stock_data = {}
         self.msg = ""
         ###群組的
-#        self.token = "Z5Cg6UUou2ipMn2orBmEm4rZ6b7nbBBhbctzff9Ch2u"
+        self.token = "Z5Cg6UUou2ipMn2orBmEm4rZ6b7nbBBhbctzff9Ch2u"
         
         ##1:1test
-        self.token = "tvDdPhFVpc2Dafuk6SOuez7arByOG4mxBauVTAQXuZO"
+#        self.token = "tvDdPhFVpc2Dafuk6SOuez7arByOG4mxBauVTAQXuZO"
 
     def get_real_stock(self,stockno):
         real_price = twstock.realtime.get(str(stockno))
@@ -94,160 +94,159 @@ class stock_monitor(object):
     def stock_warning(self, scheduler = None):
         
         stockno = self.stockno
-        
-        try:
-            if str(stockno) in self.save_stock_data:
+ 
+        if str(stockno) in self.save_stock_data:
                 
-                stock = self.save_stock_data[str(stockno)]
-                stock = self.append_real_stock(stockno, stock)
+            stock = self.save_stock_data[str(stockno)]
+            stock = self.append_real_stock(stockno, stock)
                 
-            else:
-                stock_data = twstock.Stock(str(stockno))
-                year = datetime.now().year
-                month = datetime.now().month-2
-                year = year if month>=1 else year-1
-                month = month if month>=1 else month+12
-                data = stock_data.fetch_from(year, month)
+        else:
+            stock_data = twstock.Stock(str(stockno))
+            year = datetime.now().year
+            month = datetime.now().month-2
+            year = year if month>=1 else year-1
+            month = month if month>=1 else month+12
+            data = stock_data.fetch_from(year, month)
 
-                data = pd.DataFrame(data)
+            data = pd.DataFrame(data)
                 
-                stock = data[['open','close','high','low','capacity']]
+            stock = data[['open','close','high','low','capacity']]
                 
-                stock.columns = ['open', 'close', 'high', 'low', 'volume']
-                stock['volume'] = stock['volume'].apply(lambda x:float(x)/1000)
-                #stock['close'].plot()
-                stock.index = data.date
+            stock.columns = ['open', 'close', 'high', 'low', 'volume']
+            stock['volume'] = stock['volume'].apply(lambda x:float(x)/1000)
+            #stock['close'].plot()
+            stock.index = data.date
                 
-                stock = self.append_real_stock(stockno, stock)
+            stock = self.append_real_stock(stockno, stock)
             
-            self.save_stock_data.update({str(stockno):stock})
+        self.save_stock_data.update({str(stockno):stock})
             
-
-            
-            SMA = talib.MA(np.array(stock.close), 30, matype=0)
-            SMA = pd.Series(SMA)
-            SMA.index = stock.index
-            RSI = talib.RSI(np.array(stock.close),timeperiod = 5)            
-            RSI = pd.Series(RSI)
-            RSI.index = stock.index
 
             
-            K,D = talib.STOCH(high = np.array(stock.high), 
-                              low = np.array(stock.low), 
-                              close = np.array(stock.close),
-                              fastk_period=9,
-                              slowk_period=3,
-                              slowk_matype=0,
-                              slowd_period=3,
-                              slowd_matype=0)
-            STOCH = pd.DataFrame(K, index = stock.index, columns = ['K'])
-            STOCH['D'] = pd.Series(D, index = stock.index, name = 'D')
+        SMA = talib.MA(np.array(stock.close), 30, matype=0)
+        SMA = pd.Series(SMA)
+        SMA.index = stock.index
+        RSI = talib.RSI(np.array(stock.close),timeperiod = 5)            
+        RSI = pd.Series(RSI)
+        RSI.index = stock.index
+
+            
+        K,D = talib.STOCH(high = np.array(stock.high), 
+                          low = np.array(stock.low), 
+                          close = np.array(stock.close),
+                          fastk_period=9,
+                          slowk_period=3,
+                          slowk_matype=0,
+                          slowd_period=3,
+                          slowd_matype=0)
+        STOCH = pd.DataFrame(K, index = stock.index, columns = ['K'])
+        STOCH['D'] = pd.Series(D, index = stock.index, name = 'D')
 #            J_df = pd.merge(STOCH.K.to_frame(), STOCH.D.to_frame(), 
 #                            left_index=True, right_index=True).apply(
 #                                    lambda x: (3*x.K) - (2*x.D), axis = 1)
             
 
 
-            price_now = self.real_price['realtime']['latest_trade_price']
+        price_now = self.real_price['realtime']['latest_trade_price']
             
-            k = list(STOCH.K)[-1]
-            d = list(STOCH.D)[-1]
-            rsi = list(RSI)[-1] 
+        k = list(STOCH.K)[-1]
+        d = list(STOCH.D)[-1]
+        rsi = list(RSI)[-1] 
 
             
-            price = pd.Series(stock.high)
-            highpeak = peakutils.indexes(price, thres=0.5, min_dist=30)
-            if len(highpeak)>0:
-                highpeak = highpeak[-1]
-            else:
-                highpeak = [np.array(price).argmax(),]
-            price = pd.Series(stock.low)
-            lowpeak = peakutils.indexes(-price, thres=0.5, min_dist=30)
-            if len(lowpeak)>0:
-                lowpeak = lowpeak[-1]
-            else:
-                lowpeak = [np.array(price).argmin(),]
-            up_now = highpeak<lowpeak
-            price = pd.Series(stock.close)
+        price = pd.Series(stock.high)
+        highpeak = peakutils.indexes(price, thres=0.5, min_dist=30)
+        if len(highpeak)>0:
+            highpeak = highpeak[-1]
+        else:
+            highpeak = [np.array(price).argmax(),]
+        price = pd.Series(stock.low)
+        lowpeak = peakutils.indexes(-price, thres=0.5, min_dist=30)
+        if len(lowpeak)>0:
+            lowpeak = lowpeak[-1]
+        else:
+            lowpeak = [np.array(price).argmin(),]
+        up_now = highpeak<lowpeak
+        price = pd.Series(stock.close)
             
-            days = len(stock)-max(highpeak,lowpeak)
-            bias = ma_bias_ratio(stock.close, days)
+        days = len(stock)-max(highpeak,lowpeak)
+        bias = ma_bias_ratio(stock.close, days)
 
-            msg = self.real_price['info']['code']
-            msg += self.real_price['info']['name']+'的股價: '
-            msg += price_now +'\n'
+        msg = self.real_price['info']['code']
+        msg += self.real_price['info']['name']+'的股價: '
+        msg += price_now +'\n'
 
             
             
 
-            if up_now:
-                msg += '近日趨勢上漲中 \n'
+        if up_now:
+            msg += '近日趨勢上漲中 \n'
 
-            else:
-                msg += '近日趨勢下降中 \n'
+        else:
+            msg += '近日趨勢下降中 \n'
             
-            temp = time.strptime(str(price.index[highpeak]), "%Y-%m-%d %H:%M:%S")
-            temp = time.strftime("%m/%d",temp)
-            msg += '%s最近高點: %s \n' % (temp,stock.high[highpeak])            
-            temp = time.strptime(str(price.index[lowpeak]), "%Y-%m-%d %H:%M:%S")
-            temp = time.strftime("%m/%d",temp)
-            msg += '%s最近低點: %s \n' % (temp,stock.low[lowpeak])   
+        temp = time.strptime(str(price.index[highpeak]), "%Y-%m-%d %H:%M:%S")
+        temp = time.strftime("%m/%d",temp)
+        msg += '%s最近高點: %s \n' % (temp,stock.high[highpeak])            
+        temp = time.strptime(str(price.index[lowpeak]), "%Y-%m-%d %H:%M:%S")
+        temp = time.strftime("%m/%d",temp)
+        msg += '%s最近低點: %s \n' % (temp,stock.low[lowpeak])   
             
-            KD1 = (k<20) & (d<20) & (k>d)
-            if KD1:
-                msg +='up!!!   KD < 20 且 K > D' +'\n'
+        KD1 = (k<20) & (d<20) & (k>d)
+        if KD1:
+            msg +='up!!!   KD < 20 且 K > D' +'\n'
                 
-            KD2 = (k>80) &(d>80) & (k<d)
-            if KD2:
-                msg +='down!!! KD > 80 且 K < D' +'\n'
+        KD2 = (k>80) &(d>80) & (k<d)
+        if KD2:
+            msg +='down!!! KD > 80 且 K < D' +'\n'
                 
 
-            RSI1 = rsi<20
-            if RSI1:
-                msg += 'up!!!   RSI < 20' +'\n'
+        RSI1 = rsi<20
+        if RSI1:
+            msg += 'up!!!   RSI < 20' +'\n'
                 
-            min_rsi = min(RSI[highpeak:len(RSI)])
-            temp_min = min(stock.low[highpeak:len(stock)])
-            if (float(price_now)<=temp_min)&(rsi>=min_rsi)&(~up_now):
-                msg += "high up!!! 股價新低 但 RSI不是新低"+'\n'
+        min_rsi = min(RSI[highpeak:len(RSI)])
+        temp_min = min(stock.low[highpeak:len(stock)])
+        if (float(price_now)<=temp_min)&(rsi>=min_rsi)&(~up_now):
+            msg += "high up!!! 股價新低 但 RSI不是新低"+'\n'
             
-            RSI2 = rsi>80
-            if RSI2:
-                msg += 'down!!! RSI > 80' +'\n'
+        RSI2 = rsi>80
+        if RSI2:
+            msg += 'down!!! RSI > 80' +'\n'
             
-            max_rsi = max(RSI[lowpeak:len(RSI)])
-            temp_max = min(stock.high[lowpeak:len(stock)])
-            if (float(price_now)>=temp_max)&(rsi<=max_rsi)&up_now:
-                msg += "risk down!!! 股價新高 但 RSI不是新高"+'\n'
+        max_rsi = max(RSI[lowpeak:len(RSI)])
+        temp_max = min(stock.high[lowpeak:len(stock)])
+        if (float(price_now)>=temp_max)&(rsi<=max_rsi)&up_now:
+            msg += "risk down!!! 股價新高 但 RSI不是新高"+'\n'
                 
-            BIAS1 = bias<-17
-            if BIAS1:
-                msg += 'up!!! BIAS < -17' +'\n'
+        BIAS1 = bias<-17
+        if BIAS1:
+            msg += 'up!!! BIAS < -17' +'\n'
 
-            BIAS1 = bias > 17
-            if BIAS1:
-                msg += 'down!!! BIAS > 17' +'\n'            
+        BIAS1 = bias > 17
+        if BIAS1:
+            msg += 'down!!! BIAS > 17' +'\n'            
             
-            msg += 'K = ' + str(round(k,0)) +'\n'
-            msg += 'D = ' + str(round(d,0)) +'\n'
-            msg += 'RSI = ' + str(round(rsi,0))+'\n' 
-            if up_now:
-                msg += 'Max RSI = '+str(round(max_rsi,0))+'\n'
-            else:
-                msg += 'min RSI = '+str(round(min_rsi,0))+'\n'
+        msg += 'K = ' + str(round(k,0)) +'\n'
+        msg += 'D = ' + str(round(d,0)) +'\n'
+        msg += 'RSI = ' + str(round(rsi,0))+'\n' 
+        if up_now:
+            msg += 'Max RSI = '+str(round(max_rsi,0))+'\n'
+        else:
+            msg += 'min RSI = '+str(round(min_rsi,0))+'\n'
              
-            msg += '乖離率 = ' + str(round(bias,0))+'\n' 
-            #msg += '\n'
-            #msg += str(real_price['realtime'])
+        msg += '乖離率 = ' + str(round(bias,0))+'\n' 
+        #msg += '\n'
+        #msg += str(real_price['realtime'])
             
-            start_time = str(stock.index[-20])
-            end_time = str(stock.index[-1])
-            #.strftime('%d-%m-%Y')
+        start_time = str(stock.index[-20])
+        end_time = str(stock.index[-1])
+        #.strftime('%d-%m-%Y')
             
-            n = len(stock)
-            price_now = pd.Series(self.price_now*n)
-            price_now.index =  stock.index
-            pic = plot_candles(
+        n = len(stock)
+        price_now = pd.Series(self.price_now*n)
+        price_now.index =  stock.index
+        pic = plot_candles(
                     start_time=start_time,## 開始時間
                     end_time=end_time,## 結束時間
                     pricing=stock,
@@ -258,20 +257,18 @@ class stock_monitor(object):
                     technicals = [RSI, STOCH],    ## 其他圖要畫甚麼
                     technicals_titles=['RSI', 'KD'] ## 其他圖的名稱
                     )        
-            if KD1 or KD2 or RSI1 or RSI2 or self.sent_plot:
-                msg = self.real_price['info']['time']+'\n' + msg
-                image_path = 'plot_stock.jpg'
-                plt.savefig(image_path)
-                lineNotify(self.token, msg, image_path)
+        if KD1 or KD2 or RSI1 or RSI2 or self.sent_plot:
+            msg = self.real_price['info']['time']+'\n' + msg
+            image_path = 'plot_stock.jpg'
+            plt.savefig(image_path)
+            lineNotify(self.token, msg, image_path)
                 
-            else:
-                self.msg += '\n'+msg
+        else:
+            self.msg += '\n'+msg
             
-            print(msg)
-            time.sleep(10)
-        except:
-            msg = 'something went wrong'
-            print(msg)
+        print(msg)
+        time.sleep(10)
+
 
     def sent_routing(self):
         
@@ -301,7 +298,12 @@ def start_monitor():
     sent_plot = False
     
     for stockno in stock_list:
-        monitor.manual_monitor(stockno, sent_plot)
+        try:
+            monitor.manual_monitor(stockno, sent_plot)
+        except:
+            print(stockno)
+            time.sleep(60*20)
+            monitor.manual_monitor(stockno, sent_plot)
     monitor.sent_routing()
     
 def start_monitor_no_alert():
@@ -312,58 +314,58 @@ def start_monitor_no_alert():
     for stockno in stock_list:
         monitor.manual_monitor(stockno, sent_plot)
 
-start_monitor()
+#start_monitor()
 
-#
-#scheduler = BlockingScheduler()
-#
-#
-#
-#scheduler.add_job(start_monitor,
-#                  trigger = 'cron',
-#                  day_of_week='mon-fri', 
-#                  hour=9, minute=2, end_date='2020-05-20')
-#
-#scheduler.add_job(start_monitor,
-#                  trigger = 'cron',
-#                  day_of_week='mon-fri', 
-#                  hour=9, minute=30, end_date='2020-05-20')
-#
-#scheduler.add_job(start_monitor_no_alert,
-#                  trigger = 'cron',
-#                  day_of_week='mon-fri', 
-#                  hour=10, minute=35, end_date='2020-05-20')
-#
-#scheduler.add_job(start_monitor_no_alert,
-#                  trigger = 'cron',
-#                  day_of_week='mon-fri', 
-#                  hour=11, minute=30, end_date='2020-05-20')
-#
-#scheduler.add_job(start_monitor,
-#                  trigger = 'cron',
-#                  day_of_week='mon-fri', 
-#                  hour=12, minute=0, end_date='2020-05-20')
-#
-#scheduler.add_job(start_monitor_no_alert,
-#                  trigger = 'cron',
-#                  day_of_week='mon-fri', 
-#                  hour=12, minute=30, end_date='2020-05-20')
-#
-#scheduler.add_job(start_monitor_no_alert,
-#                  trigger = 'cron',
-#                  day_of_week='mon-fri', 
-#                  hour=13, minute=20, end_date='2020-05-20')
-#
-#scheduler.add_job(start_monitor,
-#                  trigger = 'cron',
-#                  day_of_week='mon-fri', 
-#                  hour=13, minute=32, end_date='2020-05-20')
-#
-#scheduler.add_job(start_monitor,
-#                  trigger = 'cron',
-#                  day_of_week='mon-fri', 
-#                  hour=14, minute=35, end_date='2020-05-20')
-#        
-#scheduler.start()
+
+scheduler = BlockingScheduler()
+
+
+
+scheduler.add_job(start_monitor,
+                  trigger = 'cron',
+                  day_of_week='mon-fri', 
+                  hour=9, minute=2, end_date='2020-05-20')
+
+scheduler.add_job(start_monitor,
+                  trigger = 'cron',
+                  day_of_week='mon-fri', 
+                  hour=9, minute=30, end_date='2020-05-20')
+
+scheduler.add_job(start_monitor_no_alert,
+                  trigger = 'cron',
+                  day_of_week='mon-fri', 
+                  hour=10, minute=30, end_date='2020-05-20')
+
+scheduler.add_job(start_monitor_no_alert,
+                  trigger = 'cron',
+                  day_of_week='mon-fri', 
+                  hour=11, minute=30, end_date='2020-05-20')
+
+scheduler.add_job(start_monitor,
+                  trigger = 'cron',
+                  day_of_week='mon-fri', 
+                  hour=12, minute=0, end_date='2020-05-20')
+
+scheduler.add_job(start_monitor_no_alert,
+                  trigger = 'cron',
+                  day_of_week='mon-fri', 
+                  hour=12, minute=30, end_date='2020-05-20')
+
+scheduler.add_job(start_monitor_no_alert,
+                  trigger = 'cron',
+                  day_of_week='mon-fri', 
+                  hour=13, minute=20, end_date='2020-05-20')
+
+scheduler.add_job(start_monitor,
+                  trigger = 'cron',
+                  day_of_week='mon-fri', 
+                  hour=13, minute=32, end_date='2020-05-20')
+
+scheduler.add_job(start_monitor,
+                  trigger = 'cron',
+                  day_of_week='mon-fri', 
+                  hour=14, minute=35, end_date='2020-05-20')
+        
+scheduler.start()
 
 

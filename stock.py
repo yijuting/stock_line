@@ -271,7 +271,7 @@ class stock_monitor(object):
 
 
     def sent_routing(self):
-        
+        msg = self.real_price['info']['time']+'\n' + self.msg        
         lineNotify(self.token, msg)
         
     

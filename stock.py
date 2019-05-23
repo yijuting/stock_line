@@ -13,6 +13,7 @@ from datetime import datetime
 import time
 from matplotlib import pyplot as plt
 import peakutils
+import pickle
 
 from talib import abstract
 import talib
@@ -21,7 +22,13 @@ import twstock
 from apscheduler.schedulers.blocking import BlockingScheduler
 from plot_candles import *
 
-stock_list = ['2484','3036','3289','1441']
+with open('care.pickle', 'rb') as handle:
+    care = pickle.load(handle)
+
+stock_list = [stockno for stockno,_ in care.items()]    
+
+check = ['2484','3036','3289','1441']
+stock_list += [stockno for stockno in check if stockno not in stock_list]
 #,'00677U'
 
 
@@ -246,7 +253,7 @@ class stock_monitor(object):
                 self.msg += '\n'+msg
             
             print(msg)
-            
+            time.sleep(10)
         except:
             msg = 'something went wrong'
             print(msg)

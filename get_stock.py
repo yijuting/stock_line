@@ -24,7 +24,9 @@ import pickle
 
 
 def find_nearest(array,value):
+#    print(array,value)
     idx = (np.abs(array-value)).argmin()
+    
     if array[idx]<value:
         result = array[idx]
     elif idx>=1:
@@ -53,7 +55,7 @@ def get_data(stockno, month_before = 6):
     stock.columns = ['open', 'close', 'high', 'low', 'volume']
     stock['volume'] = stock['volume'].apply(lambda x:float(x)/1000)
     stock.index = data.date
-    time.sleep(30)
+    time.sleep(10)
     return stock
 
 
@@ -81,10 +83,15 @@ def get_index(stock):
     price = pd.Series(stock.close)
     peak = []
     highpeak = list(peakutils.indexes(price, thres=0.5, min_dist=30))
+    if not highpeak:
+        highpeak = [np.array(price).argmax(),]
     peak += highpeak
     lowpeak = list(peakutils.indexes(-price, thres=0.5, min_dist=30))
+    if not lowpeak:
+        lowpeak = [np.array(price).argmin(),]
     peak += lowpeak
     peak.sort()
+#    print(highpeak,lowpeak)
     
     buy = []
     for ind,date in enumerate(stock.index):
@@ -224,6 +231,17 @@ with open('care.pickle', 'rb') as handle:
 count=1
 for ind,(stockno,_) in enumerate(stock_code_list.items()):
     if stockno not in history['calculate']:
+        time_now = datetime.now()
+        if (time_now.hour==9 & time_now.minute==0):
+            time.sleep(600)
+        for H in range(9,15):
+            if (time_now.hour==H & time_now.minute==28):
+                time.sleep(600)
+        if (time_now.hour==11 & time_now.minute==58):
+            time.sleep(600)
+        if (time_now.hour==13 & time_now.minute==18):
+            time.sleep(600)
+        
         count+=1
         if count%5==1:
             time.sleep(300)

@@ -84,12 +84,12 @@ def get_index(stock):
     peak = []
     price = pd.Series(stock.high)
     highpeak = list(peakutils.indexes(price, thres=0.5, min_dist=30))
-    if not highpeak:
+    if len(highpeak)==0:
         highpeak = [np.array(price).argmax(),]
     peak += highpeak
     price = pd.Series(stock.low)
     lowpeak = list(peakutils.indexes(-price, thres=0.5, min_dist=30))
-    if not lowpeak:
+    if len(lowpeak)==0:
         lowpeak = [np.array(price).argmin(),]
     peak += lowpeak
     peak.sort()

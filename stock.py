@@ -155,10 +155,12 @@ class stock_monitor(object):
             rsi = RSI[-1] 
 
             
-            price = pd.Series(stock.close)
+            price = pd.Series(stock.high)
             highpeak = peakutils.indexes(price, thres=0.5, min_dist=30)[-1]
+            price = pd.Series(stock.low)
             lowpeak = peakutils.indexes(-price, thres=0.5, min_dist=30)[-1]
             up_now = highpeak<lowpeak
+            price = pd.Series(stock.close)
             
             days = len(stock)-max(highpeak,lowpeak)
             bias = ma_bias_ratio(stock.close, days)
@@ -178,10 +180,10 @@ class stock_monitor(object):
             
             temp = time.strptime(str(price.index[highpeak]), "%Y-%m-%d %H:%M:%S")
             temp = time.strftime("%m/%d",temp)
-            msg += '%s最近高點: %s \n' % (temp,stock.close[highpeak])            
+            msg += '%s最近高點: %s \n' % (temp,stock.high[highpeak])            
             temp = time.strptime(str(price.index[lowpeak]), "%Y-%m-%d %H:%M:%S")
             temp = time.strftime("%m/%d",temp)
-            msg += '%s最近低點: %s \n' % (temp,stock.close[lowpeak])   
+            msg += '%s最近低點: %s \n' % (temp,stock.low[lowpeak])   
             
             KD1 = (k<20) & (d<20) & (k>d)
             if KD1:
@@ -298,7 +300,7 @@ def start_monitor_no_alert():
     for stockno in stock_list:
         monitor.manual_monitor(stockno, sent_plot)
 
-
+#start_monitor()
 
 
 scheduler = BlockingScheduler()

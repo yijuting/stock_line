@@ -15,20 +15,24 @@ from matplotlib import pyplot as plt
 import peakutils
 import pickle
 
-from talib import abstract
+
 import talib
 import twstock
+import random
 
 from apscheduler.schedulers.blocking import BlockingScheduler
 from plot_candles import *
 
-with open('care.pickle', 'rb') as handle:
-    care = pickle.load(handle)
+import pymongo
 
-stock_list = [stockno for stockno,_ in care.items()]    
+client = pymongo.MongoClient()
+db = client['stock']
+collect = db['Collections']
 
-check = ['2484','3036','3289','1441']
-stock_list += [stockno for stockno in check if stockno not in stock_list]
+
+
+stock_list = ['2484','3036','1441']
+#stock_list += [stockno for stockno in check if stockno not in stock_list]
 #,'00677U'
 
 
@@ -92,7 +96,7 @@ class stock_monitor(object):
     
     
     def stock_warning(self, scheduler = None):
-        
+        time.sleep(random.randint(0,20))
         stockno = self.stockno
  
         if str(stockno) in self.save_stock_data:
@@ -230,10 +234,9 @@ class stock_monitor(object):
         msg += 'K = ' + str(round(k,0)) +'\n'
         msg += 'D = ' + str(round(d,0)) +'\n'
         msg += 'RSI = ' + str(round(rsi,0))+'\n' 
-        if up_now:
-            msg += 'Max RSI = '+str(round(max_rsi,0))+'\n'
-        else:
-            msg += 'min RSI = '+str(round(min_rsi,0))+'\n'
+        
+        msg += 'Max RSI = '+str(round(max_rsi,0))+'\n'
+        msg += 'min RSI = '+str(round(min_rsi,0))+'\n'
              
         msg += '乖離率 = ' + str(round(bias,0))+'\n' 
         #msg += '\n'
@@ -312,9 +315,31 @@ def start_monitor_no_alert():
     sent_plot = False
     
     for stockno in stock_list:
-        monitor.manual_monitor(stockno, sent_plot)
+        try:
+            monitor.manual_monitor(stockno, sent_plot)
+        except:
+            print(stockno)
+            time.sleep(60*20)
+            monitor.manual_monitor(stockno, sent_plot)
 
-#start_monitor()
+
+def find_chance():
+
+    for item in collect.find({'earn':{"$gt": 5000}},{'stockno':1,'_id':0}):
+        monitor = stock_monitor()
+        sent_plot = False
+        for _, stockno in item.items():
+            print(stockno)
+            try:
+                monitor.manual_monitor(stockno, sent_plot)
+            except:
+                print('time out !!!')
+                time.sleep(60*30)
+                monitor.manual_monitor(stockno, sent_plot)  
+            time.sleep(random.randint(60*5,60*30))
+
+
+start_monitor()
 
 
 scheduler = BlockingScheduler()
@@ -326,35 +351,40 @@ scheduler.add_job(start_monitor,
                   day_of_week='mon-fri', 
                   hour=9, minute=2, end_date='2020-05-20')
 
-scheduler.add_job(start_monitor,
+scheduler.add_job(find_chance,
                   trigger = 'cron',
                   day_of_week='mon-fri', 
-                  hour=9, minute=30, end_date='2020-05-20')
+                  hour=9, minute=20, end_date='2020-05-20')
 
-scheduler.add_job(start_monitor_no_alert,
-                  trigger = 'cron',
-                  day_of_week='mon-fri', 
-                  hour=10, minute=30, end_date='2020-05-20')
-
-scheduler.add_job(start_monitor_no_alert,
-                  trigger = 'cron',
-                  day_of_week='mon-fri', 
-                  hour=11, minute=30, end_date='2020-05-20')
-
-scheduler.add_job(start_monitor,
-                  trigger = 'cron',
-                  day_of_week='mon-fri', 
-                  hour=12, minute=0, end_date='2020-05-20')
-
-scheduler.add_job(start_monitor_no_alert,
-                  trigger = 'cron',
-                  day_of_week='mon-fri', 
-                  hour=12, minute=30, end_date='2020-05-20')
-
-scheduler.add_job(start_monitor_no_alert,
-                  trigger = 'cron',
-                  day_of_week='mon-fri', 
-                  hour=13, minute=20, end_date='2020-05-20')
+#scheduler.add_job(start_monitor,
+#                  trigger = 'cron',
+#                  day_of_week='mon-fri', 
+#                  hour=9, minute=30, end_date='2020-05-20')
+#
+#scheduler.add_job(start_monitor_no_alert,
+#                  trigger = 'cron',
+#                  day_of_week='mon-fri', 
+#                  hour=10, minute=30, end_date='2020-05-20')
+#
+#scheduler.add_job(start_monitor_no_alert,
+#                  trigger = 'cron',
+#                  day_of_week='mon-fri', 
+#                  hour=11, minute=30, end_date='2020-05-20')
+#
+#scheduler.add_job(start_monitor,
+#                  trigger = 'cron',
+#                  day_of_week='mon-fri', 
+#                  hour=12, minute=0, end_date='2020-05-20')
+#
+#scheduler.add_job(start_monitor_no_alert,
+#                  trigger = 'cron',
+#                  day_of_week='mon-fri', 
+#                  hour=12, minute=30, end_date='2020-05-20')
+#
+#scheduler.add_job(start_monitor_no_alert,
+#                  trigger = 'cron',
+#                  day_of_week='mon-fri', 
+#                  hour=13, minute=20, end_date='2020-05-20')
 
 scheduler.add_job(start_monitor,
                   trigger = 'cron',
@@ -367,5 +397,5 @@ scheduler.add_job(start_monitor,
                   hour=14, minute=35, end_date='2020-05-20')
         
 scheduler.start()
-
-
+#
+#

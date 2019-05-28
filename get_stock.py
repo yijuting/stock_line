@@ -7,11 +7,12 @@ Created on Wed May 22 18:13:18 2019
 
 
 
-from io import StringIO
+#from io import StringIO
 import pandas as pd
 import numpy as np
 from datetime import datetime
 import time
+import random
 
 import peakutils
 
@@ -21,7 +22,11 @@ import twstock
 import copy
 
 import pickle
+import pymongo
 
+client = pymongo.MongoClient()
+db = client['stock']
+collect = db['Collections']
 
 def find_nearest(array,value):
 #    print(array,value)
@@ -42,7 +47,8 @@ def ma_bias_ratio(price, day1):
     price_now = price[-1]
     return (price_now-average)/average*100
 
-def get_data(stockno, month_before = 6):
+def get_data(stockno, month_before = 12):
+    print('getting data',stockno)
     stock_data = twstock.Stock(str(stockno))
     year = datetime.now().year
     month = datetime.now().month-month_before
@@ -55,7 +61,7 @@ def get_data(stockno, month_before = 6):
     stock.columns = ['open', 'close', 'high', 'low', 'volume']
     stock['volume'] = stock['volume'].apply(lambda x:float(x)/1000)
     stock.index = data.date
-    time.sleep(10)
+    time.sleep(random.randint(5,15))
     return stock
 
 
@@ -168,6 +174,7 @@ def get_index(stock):
         buy_count = 0
         cost_cum = 0
         for ind,date in enumerate(stock.index):
+            
             price = stock.open[ind]
             if ind>10:
                 buy_stock = buy[ind]
@@ -210,15 +217,29 @@ def get_index(stock):
                 sell_cum += [date,]
                 sell_price += [price,]
                 
-    result = {stockno:{'budget':budget,
-                       'earn':money,
-                       'buy':buy_cum,'buy_price':buy_price,
-                       'sell':sell_cum,'sell_price':sell_price,
-                       'care':buy[-1],
-                       'index':(RSI[-1],K[-1],D[-1],bias)}}
-
+    result = {'stockno':stockno,
+              'budget':budget,
+              'earn':money,
+              'buy':buy_cum,'buy_price':buy_price,
+              'sell':sell_cum,'sell_price':sell_price,
+              'care':buy[-1],
+              'index':(RSI[-1],K[-1],D[-1],bias)}
+    result.update({'data':{}})
+    data.index = pd.Series(data.index).dt.strftime('%Y-%m-%d')
+    for ind in range(-10,-1):
+        temp = pd.DataFrame(data.iloc[ind]).T.to_dict('index')
+        result['data'].update(temp)
+    collect.insert_one(result)
+    
     return result
 
+
+#for stockno,temp in history.items():
+#    if stockno=='calculate':
+#        continue
+#    result={'stockno':stockno}
+#    result.update(temp)
+#    collect.insert_one(result)
 
 with open('stock_name.pickle', 'rb') as handle:
     stock_code_list = pickle.load(handle)
@@ -231,44 +252,74 @@ with open('care.pickle', 'rb') as handle:
 #history = {'calculate':[]}
 #care = {}
 #
+
 count=1
 for ind,(stockno,_) in enumerate(stock_code_list.items()):
+    start = time.time()
+#    if ind in [66,67]:
+#        print(ind,stockno)
+#        stock = get_data(stockno)
+#        result = get_index(stock)
+#        print(result)
+#        if result[stockno]['earn']!=0:
+#            history.update(result)
+#            with open('history.pickle', 'wb') as handle:
+#                pickle.dump(history, handle, protocol=pickle.HIGHEST_PROTOCOL)
+#
+#        if result[stockno]['care']>0:
+#            care.update(result)
+#            with open('care.pickle', 'wb') as handle:
+#                pickle.dump(care, handle, protocol=pickle.HIGHEST_PROTOCOL)
+#                
     if stockno not in history['calculate']:
+        print(ind,stockno)
+        
+#        with open('history.pickle', 'wb') as handle:
+#            pickle.dump(history, handle, protocol=pickle.HIGHEST_PROTOCOL)
+#        with open('care.pickle', 'wb') as handle:
+#            pickle.dump(care, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        
         time_now = datetime.now()
-        if (time_now.hour==9 & time_now.minute==0):
+        if (((time_now.hour==9)&(time_now.minute<5))or((time_now.hour==8) & (time_now.minute>57))):
             time.sleep(600)
         for H in range(9,15):
-            if (time_now.hour==H & time_now.minute==28):
+            if (time_now.hour==H & ((time_now.minute<35)or(time_now.minute>27))):
                 time.sleep(600)
-        if (time_now.hour==11 & time_now.minute==58):
+        if (((time_now.hour==12)&(time_now.minute<5))or((time_now.hour==11) & (time_now.minute>57))):
             time.sleep(600)
-        if (time_now.hour==13 & time_now.minute==18):
+        if (time_now.hour==13 &  ((time_now.minute<25)or(time_now.minute>17))):
             time.sleep(600)
         
         count+=1
-        if count%5==1:
-            time.sleep(300)
-        else:
-            time.sleep(count%5*10)
-        print(ind,stockno)
+        time.sleep(random.randint(0,20))
+
         if len(stockno)==4:
             try:
                 stock = get_data(stockno)
             except:
+                print('time out!')
                 try:
-                    time.sleep(60*30)
+                    time.sleep(random.randint(60*30,60*50))
                     stock = get_data(stockno)
                 except:
-                    time.sleep(60*30*2)
+                    print('time out!')
+                    time.sleep(random.randint(60*80,60*100))
                     stock = get_data(stockno)                   
             result = get_index(stock)
             print(result)
-            if result[stockno]['earn']!=0:
-                history.update(result)
-            if result[stockno]['care']>0:
+#            if result[stockno]['earn']!=0:
+#                history.update(result)
+            if result['care']>0:
                 care.update(result)
+                with open('care.pickle', 'wb') as handle:
+                    pickle.dump(care, handle, protocol=pickle.HIGHEST_PROTOCOL)
         history['calculate'].append(stockno)
         with open('history.pickle', 'wb') as handle:
             pickle.dump(history, handle, protocol=pickle.HIGHEST_PROTOCOL)
-        with open('care.pickle', 'wb') as handle:
-            pickle.dump(care, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        if count %3 ==0:
+            time.sleep(random.randint(60*20,60*40))
+        else:
+            time.sleep(random.randint(60*3*count,60*5*count))
+            
+        end = time.time()
+        print('Time: ',end - start)

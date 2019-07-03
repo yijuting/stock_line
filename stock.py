@@ -9,7 +9,7 @@ import requests
 from io import StringIO
 import pandas as pd
 import numpy as np
-from datetime import datetime
+import datetime
 import time
 from matplotlib import pyplot as plt
 import peakutils
@@ -21,19 +21,41 @@ import twstock
 import random
 
 from apscheduler.schedulers.blocking import BlockingScheduler
-from plot_candles import *
+from plot_candles import lineNotify, plot_candles
 
 import pymongo
 
 client = pymongo.MongoClient()
 db = client['stock']
-collect = db['Collections']
+collect = db['stock_new']
 
 
 
-stock_list = ['2484','3036','1441']
+stock_list = ['3036','2331','00677U']
 #stock_list += [stockno for stockno in check if stockno not in stock_list]
 #,'00677U'
+
+def crawl_financial_Report(stock_number):
+    stock_number = int(stock_number)
+    url = "https://mops.twse.com.tw/mops/web/ajax_t164sb04";    # 損益表
+    year = 108
+    season = 1    
+    form_data = {
+        'encodeURIComponent':1,
+        'step':1,
+        'firstin':1,
+        'off':1,
+        'co_id':stock_number,
+        'year': year,
+        'season': season,
+    }
+
+    r = requests.post(url,form_data)
+    html_df = pd.read_html(r.text)[1].fillna("")
+    html_df.columns = range(0,len(html_df.columns))
+    newcol = html_df.columns[1]
+    old = html_df.columns[3]
+    return html_df[newcol].loc[38],html_df[old].loc[38]
 
 
 
@@ -45,18 +67,18 @@ def ma_bias_ratio(price, day1):
     return (price_now-average)/average*100
 
 class stock_monitor(object):
-    def __init__(self):    
+    def __init__(self,token):    
         self. save_stock_data = {}
         self.msg = ""
         ###群組的
-        self.token = "Z5Cg6UUou2ipMn2orBmEm4rZ6b7nbBBhbctzff9Ch2u"
+        self.token = token
         
         ##1:1test
-#        self.token = "tvDdPhFVpc2Dafuk6SOuez7arByOG4mxBauVTAQXuZO"
+#        self.
 
     def get_real_stock(self,stockno):
         real_price = twstock.realtime.get(str(stockno))
-        time_now = datetime.now()
+        time_now = datetime.datetime.now()
         real_time = pd.Timestamp(time_now.year,time_now.month,time_now.day)  
         
         self.real_price = real_price
@@ -77,7 +99,7 @@ class stock_monitor(object):
 
 
     def append_real_stock(self, stockno, stock):
-        time_now = datetime.now()
+        time_now = datetime.datetime.now()
         real_time = pd.Timestamp(time_now.year,time_now.month,time_now.day)   
 
         latest_stock_save = stock.iloc[-1].name    
@@ -95,7 +117,7 @@ class stock_monitor(object):
         return(stock)
     
     
-    def stock_warning(self, scheduler = None):
+    def stock_warning(self):
         time.sleep(random.randint(0,20))
         stockno = self.stockno
  
@@ -106,8 +128,8 @@ class stock_monitor(object):
                 
         else:
             stock_data = twstock.Stock(str(stockno))
-            year = datetime.now().year
-            month = datetime.now().month-2
+            year = datetime.datetime.now().year
+            month = datetime.datetime.now().month-2
             year = year if month>=1 else year-1
             month = month if month>=1 else month+12
             data = stock_data.fetch_from(year, month)
@@ -138,7 +160,7 @@ class stock_monitor(object):
         K,D = talib.STOCH(high = np.array(stock.high), 
                           low = np.array(stock.low), 
                           close = np.array(stock.close),
-                          fastk_period=9,
+                          fastk_period=5,
                           slowk_period=3,
                           slowk_matype=0,
                           slowd_period=3,
@@ -196,13 +218,15 @@ class stock_monitor(object):
         temp = time.strftime("%m/%d",temp)
         msg += '%s最近低點: %s \n' % (temp,stock.low[lowpeak])   
             
-        KD1 = (k<20) & (d<20) & (k>d)
+        KD1 = ((k<20) or (d<20)) & (k>d)
         if KD1:
             msg +='up!!!   KD < 20 且 K > D' +'\n'
                 
-        KD2 = (k>80) &(d>80) & (k<d)
-        if KD2:
-            msg +='down!!! KD > 80 且 K < D' +'\n'
+        KD2 = False
+        if not self.only_buy:
+            KD2 = ((k>80) or(d>80)) & (k<d)
+            if KD2:
+                msg +='down!!! KD > 80 且 K < D' +'\n'
                 
 
         RSI1 = rsi<20
@@ -211,25 +235,29 @@ class stock_monitor(object):
                 
         min_rsi = min(RSI[highpeak:len(RSI)])
         temp_min = min(stock.low[highpeak:len(stock)])
-        if (float(price_now)<=temp_min)&(rsi>=min_rsi)&(~up_now):
+        if (float(price_now)==temp_min)&(rsi!=min_rsi):
             msg += "high up!!! 股價新低 但 RSI不是新低"+'\n'
             
-        RSI2 = rsi>80
-        if RSI2:
-            msg += 'down!!! RSI > 80' +'\n'
+        RSI2 = False
+        if not self.only_buy:
+            RSI2 = rsi>80
+            if RSI2:
+                msg += 'down!!! RSI > 80' +'\n'
             
         max_rsi = max(RSI[lowpeak:len(RSI)])
-        temp_max = min(stock.high[lowpeak:len(stock)])
-        if (float(price_now)>=temp_max)&(rsi<=max_rsi)&up_now:
-            msg += "risk down!!! 股價新高 但 RSI不是新高"+'\n'
+#        temp_max = min(stock.high[lowpeak:len(stock)])
+#        if (float(price_now)==temp_max)&(rsi!=max_rsi):
+#            msg += "risk down!!! 股價新高 但 RSI不是新高"+'\n'
                 
         BIAS1 = bias<-17
         if BIAS1:
             msg += 'up!!! BIAS < -17' +'\n'
 
-        BIAS1 = bias > 17
-        if BIAS1:
-            msg += 'down!!! BIAS > 17' +'\n'            
+        BIAS2 = False
+        if not self.only_buy:
+            if BIAS1 :
+                BIAS2 = bias > 17
+                msg += 'down!!! BIAS > 17' +'\n'            
             
         msg += 'K = ' + str(round(k,0)) +'\n'
         msg += 'D = ' + str(round(d,0)) +'\n'
@@ -259,15 +287,23 @@ class stock_monitor(object):
                     overlays=[SMA,price_now],                    ##  跟股價圖 疊起來的是什麼指標
                     technicals = [RSI, STOCH],    ## 其他圖要畫甚麼
                     technicals_titles=['RSI', 'KD'] ## 其他圖的名稱
-                    )        
-        if KD1 or KD2 or RSI1 or RSI2 or self.sent_plot:
-            msg = self.real_price['info']['time']+'\n' + msg
-            image_path = 'plot_stock.jpg'
-            plt.savefig(image_path)
-            lineNotify(self.token, msg, image_path)
+                    )     
+        temp = crawl_financial_Report(stockno)
+        msg += '2019 Q1 每股盈餘: %s' % temp[0]
+        msg += '2018 Q1 每股盈餘: %s' % temp[1]
+        if self.sent_alert:
+            if KD1 or KD2 or RSI1 or RSI2 or self.sent_plot:
                 
+
+                msg = self.real_price['info']['time']+'\n' + msg
+                image_path = 'plot_stock.jpg'
+                plt.savefig(image_path)
+                lineNotify(self.token, msg, image_path)
+                    
+            else:
+                self.msg += '\n'+msg
         else:
-            self.msg += '\n'+msg
+             self.msg += '\n'+msg
             
         print(msg)
         time.sleep(10)
@@ -278,10 +314,10 @@ class stock_monitor(object):
         lineNotify(self.token, msg)
         
     
-    def manual_monitor(self, stockno,sent_plot = False):
-
+    def manual_monitor(self, stockno, sent_alert = True,sent_plot = False,only_buy = False):
+        self.only_buy = only_buy
         self.stockno = stockno
-
+        self.sent_alert = sent_alert
         self.sent_plot = sent_plot
         self.stock_warning()
         
@@ -293,103 +329,114 @@ class stock_monitor(object):
 
 
 #monitor.manual_monitor(stock_list[], sent_plot)
-def start_monitor():
-
-    monitor = stock_monitor()
+def start_monitor(sent_alert = True):
+    token = "vugzxGDG6UNm8HXu1zzzWEmyaz3nbvYKnvFqbYdwnIf"
+    monitor = stock_monitor(token)
     msg = '======new notification====='
     lineNotify(monitor.token, msg)
     sent_plot = False
     
     for stockno in stock_list:
         try:
-            monitor.manual_monitor(stockno, sent_plot)
+            monitor.manual_monitor(stockno, sent_alert, sent_plot)
         except:
             print(stockno)
             time.sleep(60*20)
-            monitor.manual_monitor(stockno, sent_plot)
+            monitor.manual_monitor(stockno, sent_alert, sent_plot)
     monitor.sent_routing()
     
-def start_monitor_no_alert():
-    monitor = stock_monitor()
+def start_monitor_no_alert(sent_alert = True):
+    token = 'vugzxGDG6UNm8HXu1zzzWEmyaz3nbvYKnvFqbYdwnIf'
+    ###1:1
+#    token = "tvDdPhFVpc2Dafuk6SOuez7arByOG4mxBauVTAQXuZO"
+    monitor = stock_monitor(token)
 
     sent_plot = False
     
     for stockno in stock_list:
         try:
-            monitor.manual_monitor(stockno, sent_plot)
+            monitor.manual_monitor(stockno, sent_alert, sent_plot)
         except:
             print(stockno)
             time.sleep(60*20)
-            monitor.manual_monitor(stockno, sent_plot)
+            monitor.manual_monitor(stockno, sent_alert, sent_plot)
 
 
-def find_chance():
-
-    for item in collect.find({'earn':{"$gt": 5000}},{'stockno':1,'_id':0}):
-        monitor = stock_monitor()
-        sent_plot = False
-        for _, stockno in item.items():
-            print(stockno)
+def find_chance(sent_alert = True):
+    token = "Z5Cg6UUou2ipMn2orBmEm4rZ6b7nbBBhbctzff9Ch2u"
+    monitor = stock_monitor(token)
+    count = 0
+    sent_plot = False   
+    
+    data = collect.find({'earn2':{"$gt": 0.1}},{'stockno':1,'buy2':1,'_id':0}).sort(
+            [("earn2", pymongo.DESCENDING)])
+    for item in data:
+        time_now = datetime.datetime.now()
+        for col, element in item.items():
+            if col == 'stockno':
+                stockno = element
+            else:
+                frequency = len(element)
+        print(stockno, frequency)
+        if frequency>1:
+            count += 1
+            sleep_time = 0
             try:
-                monitor.manual_monitor(stockno, sent_plot)
+                monitor.manual_monitor(stockno, sent_alert, sent_plot,only_buy = True)
             except:
-                print('time out !!!')
-                time.sleep(60*30)
-                monitor.manual_monitor(stockno, sent_plot)  
-            time.sleep(random.randint(60*5,60*30))
+                print('%s, time out!'% sleep_time)
+                try:
+                    sleep_time = random.randint(sleep_time+60*20,sleep_time+60*30)
+                    time.sleep(sleep_time)
+                    monitor.manual_monitor(stockno, sent_alert, sent_plot,only_buy = True) 
+                except:
+                    print('%s, time out!'% sleep_time)
+                    sleep_time = random.randint(sleep_time+60*60,sleep_time+60*80)
+                    time.sleep(60*30)
+                    monitor.manual_monitor(stockno, sent_alert, sent_plot,only_buy = True)           
+            if count % 3 == 0:
+                sleep_time = random.randint(60*15,60*20)
+                time.sleep(sleep_time)
+            else:
+                sleep_time = random.randint(60*5,60*10)
+                time.sleep(sleep_time)
+        if (time_now.hour>14):
+            continue
+
+                
+    if (time_now.hour<12):
+        scheduler = BlockingScheduler()
+        scheduler.add_job(start_monitor,
+                          trigger = 'cron',
+                          day_of_week='mon-fri', 
+                          hour=12, minute=0, end_date='2020-05-20')        
 
 
-start_monitor()
+#start_monitor(sent_alert = False)
 
 
 scheduler = BlockingScheduler()
 
-
+scheduler.add_job(start_monitor,
+                  trigger = 'cron',
+                  day_of_week='mon-fri', 
+                  hour=9, minute=5, end_date='2020-05-20')
 
 scheduler.add_job(start_monitor,
                   trigger = 'cron',
                   day_of_week='mon-fri', 
-                  hour=9, minute=2, end_date='2020-05-20')
+                  hour=9, minute=40, end_date='2020-05-20')
 
 scheduler.add_job(find_chance,
                   trigger = 'cron',
                   day_of_week='mon-fri', 
-                  hour=9, minute=20, end_date='2020-05-20')
+                  hour=9, minute=50, end_date='2020-05-20')
 
-#scheduler.add_job(start_monitor,
-#                  trigger = 'cron',
-#                  day_of_week='mon-fri', 
-#                  hour=9, minute=30, end_date='2020-05-20')
-#
-#scheduler.add_job(start_monitor_no_alert,
-#                  trigger = 'cron',
-#                  day_of_week='mon-fri', 
-#                  hour=10, minute=30, end_date='2020-05-20')
-#
-#scheduler.add_job(start_monitor_no_alert,
-#                  trigger = 'cron',
-#                  day_of_week='mon-fri', 
-#                  hour=11, minute=30, end_date='2020-05-20')
-#
-#scheduler.add_job(start_monitor,
-#                  trigger = 'cron',
-#                  day_of_week='mon-fri', 
-#                  hour=12, minute=0, end_date='2020-05-20')
-#
-#scheduler.add_job(start_monitor_no_alert,
-#                  trigger = 'cron',
-#                  day_of_week='mon-fri', 
-#                  hour=12, minute=30, end_date='2020-05-20')
-#
-#scheduler.add_job(start_monitor_no_alert,
-#                  trigger = 'cron',
-#                  day_of_week='mon-fri', 
-#                  hour=13, minute=20, end_date='2020-05-20')
 
-scheduler.add_job(start_monitor,
+scheduler.add_job(start_monitor_no_alert,
                   trigger = 'cron',
                   day_of_week='mon-fri', 
-                  hour=13, minute=32, end_date='2020-05-20')
+                  hour=13, minute=20, end_date='2020-05-20')
 
 scheduler.add_job(start_monitor,
                   trigger = 'cron',

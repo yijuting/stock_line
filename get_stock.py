@@ -48,20 +48,27 @@ def ma_bias_ratio(price, day1):
     price_now = price[-1]
     return (price_now-average)/average*100
 
-def get_data(stockno, month_before = 12):
+def get_data(stockno, month_before = 6):
     print('getting data',stockno)
     stock_data = twstock.Stock(str(stockno))
+    time.sleep(random.randint(5,15))
     year = datetime.datetime.now().year
     month = datetime.datetime.now().month-month_before
     year = year if month>=1 else year-1
     month = month if month>=1 else month+12
     data = stock_data.fetch_from(year, month)
     
-    data = pd.DataFrame(data)
+#    stock = pd.DataFrame()
+#    
+#    stock['open'] = stock_data.open
+#    stock['close'] = stock_data.close
+#    stock['high'] = stock_data.high
+#    stock['low'] = stock_data.low
+#    stock['capacity'] = stock_data.capacity
     stock = data[['open','close','high','low','capacity']]
     stock.columns = ['open', 'close', 'high', 'low', 'volume']
     stock['volume'] = stock['volume'].apply(lambda x:float(x)/1000)
-    stock.index = data.date
+    stock.index = stock_data.date
     time.sleep(random.randint(5,15))
     return stock
 
@@ -354,15 +361,15 @@ def get_index(stock):
 #history = {'calculate':[]}
 #care = {}
 
+##
+#stockno = '3036'
+#stock = get_data(stockno)                   
+#result = get_index(stock)
 #
-stockno = '2421'
-stock = get_data(stockno)                   
-result = get_index(stock)
-
 #history['calculate'].append(stockno)
 #with open('history.pickle', 'wb') as handle:
 #    pickle.dump(history, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
+#
 
 
 with open('stock_name.pickle', 'rb') as handle:
@@ -373,7 +380,7 @@ with open('history.pickle', 'rb') as handle:
 with open('care.pickle', 'rb') as handle:
     care = pickle.load(handle)
 count=1
-"""
+
 
 collect2 = db['Collections']
 
@@ -473,4 +480,3 @@ for ind,stockno in enumerate(waiting_stock):
       
         end = time.time()
         print('Time: ',end - start)
-"""

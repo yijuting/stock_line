@@ -31,7 +31,7 @@ collect = db['stock_new']
 
 
 
-stock_list = ['3036','2331','00677U']
+stock_list = ['2331']
 #stock_list += [stockno for stockno in check if stockno not in stock_list]
 #,'00677U'
 

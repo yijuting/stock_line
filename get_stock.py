@@ -24,10 +24,12 @@ import copy
 
 import pickle
 import pymongo
-
+#######mongo db#######
 client = pymongo.MongoClient()
 db = client['stock']
 collect = db['stock_new']
+#############
+
 
 def find_nearest(array,value):
 #    print(array,value)
@@ -381,22 +383,23 @@ with open('care.pickle', 'rb') as handle:
     care = pickle.load(handle)
 count=1
 
+waiting_stock =[]
 
-collect2 = db['Collections']
-
-data = collect2.find({'earn':{"$gt": 3000}},{'stockno':1,'buy':1,'_id':0}).sort(
-        [("earn", pymongo.DESCENDING)])
-
-waiting_stock = ['0050','2484','3036','1312','1526']
-for item in data:
-    for col, element in item.items():
-            if col == 'stockno':
-                stockno = element
-            else:
-                frequency = len(element)
-    if frequency>1:
-        waiting_stock += [stockno,]
-        
+#collect2 = db['Collections']
+#
+#data = collect2.find({'earn':{"$gt": 3000}},{'stockno':1,'buy':1,'_id':0}).sort(
+#        [("earn", pymongo.DESCENDING)])
+#
+#waiting_stock += ['0050','2484','3036','1312','1526']
+#for item in data:
+#    for col, element in item.items():
+#            if col == 'stockno':
+#                stockno = element
+#            else:
+#                frequency = len(element)
+#    if frequency>1:
+#        waiting_stock += [stockno,]
+#        
 for ind,(stockno,_) in enumerate(stock_code_list.items()):
     waiting_stock += [stockno,]
     
@@ -417,66 +420,67 @@ for ind,stockno in enumerate(waiting_stock):
 #            care.update(result)
 #            with open('care.pickle', 'wb') as handle:
 #                pickle.dump(care, handle, protocol=pickle.HIGHEST_PROTOCOL)
-#                
-    if stockno not in history['calculate']:
-        print(ind,stockno)
-        
-#        with open('history.pickle', 'wb') as handle:
-#            pickle.dump(history, handle, protocol=pickle.HIGHEST_PROTOCOL)
-#        with open('care.pickle', 'wb') as handle:
-#            pickle.dump(care, handle, protocol=pickle.HIGHEST_PROTOCOL)
-        
-        if datetime.date.today().weekday()<=4 :
-            time_now = datetime.datetime.now()
+
+    if ind >500 :     
+        if stockno not in history['calculate']:
+            print(ind,stockno)
             
-            if (((time_now.hour==9)&(time_now.minute<20))or((time_now.hour==8) & (time_now.minute>40))):
-                print('sleeping now for %s min' % str(60*6+20))
-                time.sleep(60*60*6+60*20)        
-
-
-        
-        count+=1
-        sleep_time = random.randint(10,20)
-        time.sleep(sleep_time)
-
-        if len(stockno)==4:
+    #        with open('history.pickle', 'wb') as handle:
+    #            pickle.dump(history, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    #        with open('care.pickle', 'wb') as handle:
+    #            pickle.dump(care, handle, protocol=pickle.HIGHEST_PROTOCOL)
             
-            try:
-                stock = get_data(stockno)
-            except:
-                print('%s, time out!'% sleep_time)
+            if datetime.date.today().weekday()<=4 :
+                time_now = datetime.datetime.now()
+                
+                if (((time_now.hour==9)&(time_now.minute<20))or((time_now.hour==8) & (time_now.minute>40))):
+                    print('sleeping now for %s min' % str(60*6+20))
+                    time.sleep(60*60*6+60*20)        
+    
+    
+            
+            count+=1
+            sleep_time = random.randint(10,20)
+            time.sleep(sleep_time)
+    
+            if len(stockno)==4:
+                
                 try:
-                    sleep_time += random.randint(60*30,60*40)
-                    time.sleep(sleep_time)
                     stock = get_data(stockno)
                 except:
+                    print('%s, time out!'% sleep_time)
                     try:
-                        print('%s, time out!'% sleep_time)
-                        sleep_time += random.randint(60*60,60*80)
+                        sleep_time += random.randint(60*30,60*40)
                         time.sleep(sleep_time)
-                        stock = get_data(stockno)    
+                        stock = get_data(stockno)
                     except:
-                        print('%s, time out!'% sleep_time)
-                        sleep_time += random.randint(60*120,60*140)
-                        time.sleep(sleep_time)
-                        stock = get_data(stockno)                           
-            result = get_index(stock)
-#            print(result)
-#            if result[stockno]['earn']!=0:
-#                history.update(result)
-            if result['care']>0:
-                care.update(result)
-                with open('care.pickle', 'wb') as handle:
-                    pickle.dump(care, handle, protocol=pickle.HIGHEST_PROTOCOL)
-        history['calculate'].append(stockno)
-        with open('history.pickle', 'wb') as handle:
-            pickle.dump(history, handle, protocol=pickle.HIGHEST_PROTOCOL)
-        if count %3 ==0:
-            sleep_time = random.randint(60*20,60*40)
-            time.sleep(sleep_time)
-        else:
-            sleep_time = max(random.randint(60*count,60*3*count),30)
-            time.sleep(sleep_time)
-      
-        end = time.time()
-        print('Time: ',end - start)
+                        try:
+                            print('%s, time out!'% sleep_time)
+                            sleep_time += random.randint(60*60,60*80)
+                            time.sleep(sleep_time)
+                            stock = get_data(stockno)    
+                        except:
+                            print('%s, time out!'% sleep_time)
+                            sleep_time += random.randint(60*120,60*140)
+                            time.sleep(sleep_time)
+                            stock = get_data(stockno)                           
+                result = get_index(stock)
+    #            print(result)
+    #            if result[stockno]['earn']!=0:
+    #                history.update(result)
+                if result['care']>0:
+                    care.update(result)
+                    with open('care.pickle', 'wb') as handle:
+                        pickle.dump(care, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            history['calculate'].append(stockno)
+            with open('history.pickle', 'wb') as handle:
+                pickle.dump(history, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            if count %3 ==0:
+                sleep_time = random.randint(60*20,60*40)
+                time.sleep(sleep_time)
+            else:
+                sleep_time = max(random.randint(60*count,60*3*count),30)
+                time.sleep(sleep_time)
+          
+            end = time.time()
+            print('Time: ',end - start)

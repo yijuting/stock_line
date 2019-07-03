@@ -25,15 +25,20 @@ from plot_candles import lineNotify, plot_candles
 
 import pymongo
 
-client = pymongo.MongoClient()
-db = client['stock']
-collect = db['stock_new']
+#client = pymongo.MongoClient()
+#db = client['stock']
+#collect = db['stock_new']
 
 
 
 stock_list = ['2331']
 #stock_list += [stockno for stockno in check if stockno not in stock_list]
 #,'00677U'
+
+waiting = ['2208','1439','1526','1441',
+           '2383','2013','2329','1256','1515','1582','1762',
+           '2617','2025','1507','1417','2331','2462',
+           '2316','2442','2359','2028','2368']
 
 def crawl_financial_Report(stock_number):
     stock_number = int(stock_number)
@@ -368,6 +373,7 @@ def find_chance(sent_alert = True):
     count = 0
     sent_plot = False   
     
+    waiting = []
     data = collect.find({'earn2':{"$gt": 0.1}},{'stockno':1,'buy2':1,'_id':0}).sort(
             [("earn2", pymongo.DESCENDING)])
     for item in data:
@@ -381,6 +387,7 @@ def find_chance(sent_alert = True):
         if frequency>1:
             count += 1
             sleep_time = 0
+            waiting+=[stockno,]
             try:
                 monitor.manual_monitor(stockno, sent_alert, sent_plot,only_buy = True)
             except:
@@ -411,38 +418,68 @@ def find_chance(sent_alert = True):
                           day_of_week='mon-fri', 
                           hour=12, minute=0, end_date='2020-05-20')        
 
+def find_chance_his(sent_alert = True):
+    token = "Z5Cg6UUou2ipMn2orBmEm4rZ6b7nbBBhbctzff9Ch2u"
+    monitor = stock_monitor(token)
+    count = 0
+    sent_plot = False   
+    
+
+    for stockno in waiting:
+        sleep_time = 3
+        try:
+            monitor.manual_monitor(stockno, sent_alert, sent_plot,only_buy = True)
+        except:
+            print('%s, time out!'% sleep_time)
+            try:
+                sleep_time = random.randint(sleep_time+60*20,sleep_time+60*30)
+                time.sleep(sleep_time)
+                monitor.manual_monitor(stockno, sent_alert, sent_plot,only_buy = True) 
+            except:
+                print('%s, time out!'% sleep_time)
+                sleep_time = random.randint(sleep_time+60*60,sleep_time+60*80)
+                time.sleep(60*30)
+                monitor.manual_monitor(stockno, sent_alert, sent_plot,only_buy = True)           
+        if count % 3 == 0:
+            sleep_time = random.randint(60*15,60*20)
+            time.sleep(sleep_time)
+        else:
+            sleep_time = random.randint(60*5,60*10)
+            time.sleep(sleep_time)
+
+find_chance_his()
 
 #start_monitor(sent_alert = False)
 
-
-scheduler = BlockingScheduler()
-
-scheduler.add_job(start_monitor,
-                  trigger = 'cron',
-                  day_of_week='mon-fri', 
-                  hour=9, minute=5, end_date='2020-05-20')
-
-scheduler.add_job(start_monitor,
-                  trigger = 'cron',
-                  day_of_week='mon-fri', 
-                  hour=9, minute=40, end_date='2020-05-20')
-
-scheduler.add_job(find_chance,
-                  trigger = 'cron',
-                  day_of_week='mon-fri', 
-                  hour=9, minute=50, end_date='2020-05-20')
-
-
-scheduler.add_job(start_monitor_no_alert,
-                  trigger = 'cron',
-                  day_of_week='mon-fri', 
-                  hour=13, minute=20, end_date='2020-05-20')
-
-scheduler.add_job(start_monitor,
-                  trigger = 'cron',
-                  day_of_week='mon-fri', 
-                  hour=14, minute=35, end_date='2020-05-20')
-        
-scheduler.start()
+#
+#scheduler = BlockingScheduler()
+#
+#scheduler.add_job(start_monitor,
+#                  trigger = 'cron',
+#                  day_of_week='mon-fri', 
+#                  hour=9, minute=5, end_date='2020-05-20')
+#
+#scheduler.add_job(start_monitor,
+#                  trigger = 'cron',
+#                  day_of_week='mon-fri', 
+#                  hour=9, minute=40, end_date='2020-05-20')
+#
+#scheduler.add_job(find_chance,
+#                  trigger = 'cron',
+#                  day_of_week='mon-fri', 
+#                  hour=9, minute=50, end_date='2020-05-20')
 #
 #
+#scheduler.add_job(start_monitor_no_alert,
+#                  trigger = 'cron',
+#                  day_of_week='mon-fri', 
+#                  hour=13, minute=20, end_date='2020-05-20')
+#
+#scheduler.add_job(start_monitor,
+#                  trigger = 'cron',
+#                  day_of_week='mon-fri', 
+#                  hour=14, minute=35, end_date='2020-05-20')
+#        
+#scheduler.start()
+##
+##
